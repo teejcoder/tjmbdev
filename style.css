@@ -94,6 +94,7 @@ h6 {
   color: var(--fg-dim);
   margin-bottom: 1.5rem;
 }
+
 a {
   font-size: 0.85rem;
   font-weight: 400;
@@ -161,7 +162,7 @@ nav {
 
 /* PROJECT */
 
-.project-card {
+.proj-card {
   padding: 0.8rem 0;
   border-bottom: 1px solid var(--bg-subtle);
   display: flex;
@@ -225,10 +226,53 @@ nav {
   color: var(--fg-faint);
 }
 
+/* BLOG POST */
+
+.article-post-card {
+  padding: 1rem 2rem;
+  max-width: 32rem;
+  display: flex;
+  align-items: start;
+  justify-content: start;
+  flex-direction: column;
+  flex-wrap: wrap;
+}
+
+.article-date {
+  font-size: 0.8rem;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  color: var(--fg-faint);
+}
+
+.article-title {
+  font-family: var(--mono);
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 2em;
+  text-transform: lowercase;
+  letter-spacing: 0.1rem;
+  color: var(--fg);
+}
+
+.article-paragraph {
+  font-family: var(--mono);
+  color: var(--fg-dim);
+  font-size: 1rem;
+  margin-bottom: 2em;
+  letter-spacing: 0.1em;
+}
+
+.article-bold {
+  font-weight: bold;
+  color: var(--fg);
+}
+
 @media (max-width: 600px) {
   nav {
     padding: 2rem 1rem;
   }
+
   .container {
     padding: 5rem 1rem;
   }
