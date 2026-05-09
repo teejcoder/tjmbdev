@@ -1,3 +1,19 @@
+/* ─── Canvas background layer ─── */
+#solar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+}
+
+body > nav,
+body > main {
+  position: relative;
+  z-index: 1;
+}
+
 /* =========================
    Reset
    ========================= */
