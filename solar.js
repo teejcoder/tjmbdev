@@ -16,15 +16,15 @@
   const FAINT = [25, 28, 35];
 
   const PLANET_COLORS = [
-    GOLD,
-    [188, 183, 178],
-    [227, 197, 105],
-    [70, 130, 220],
-    [193, 92, 52],
-    [219, 179, 119],
-    [210, 190, 140],
-    [173, 216, 230],
-    [63, 84, 186],
+    [255, 210, 80],    // sun
+    [169, 169, 173],  // mercury
+    [240, 225, 180],  // venus
+    [70, 130, 220],   // earth
+    [190, 95, 60],    // mars
+    [210, 175, 130],  // jupiter
+    [225, 200, 145],  // saturn
+    [150, 210, 220],  // uranus
+    [55, 90, 180],    // neptune
   ];
 
   /* ─── State ─── */
@@ -37,7 +37,7 @@
     ctx.setTransform(d, 0, 0, d, 0, 0);
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-    sc = Math.min(W * 0.24, H * 0.48);
+    sc = Math.min(W * 0.60, H * 0.40);
   }
 
   /* ─── Helpers ─── */
@@ -89,6 +89,42 @@
     { name: 'saturn',  orbit: 1.75, radius: 0.18, speed: 0.3,  tilt: 2.5, colorIdx: 6, count: 400, rings: true, rotSpeed: 1.0  },
     { name: 'uranus',  orbit: 2.00, radius: 0.13, speed: 0.18, tilt: 0.8, colorIdx: 7, count: 300, rotSpeed: 1.5  },
     { name: 'neptune', orbit: 2.25, radius: 0.11, speed: 0.10, tilt: 1.8, colorIdx: 8, count: 200, rotSpeed: 2.8  },
+  ];
+
+  const MOONS = [
+    { planetIdx: 3, name: 'moon',     orbit: 1.5,  radius: 0.035, speed: 8.0,  colorIdx: 9, count: 60  },
+    { planetIdx: 4, name: 'phobos',   orbit: 1.8,  radius: 0.015, speed: 12.0, colorIdx: 4, count: 30  },
+    { planetIdx: 4, name: 'deimos',   orbit: 2.5,  radius: 0.010, speed: 6.0,  colorIdx: 4, count: 30  },
+    { planetIdx: 5, name: 'io',       orbit: 2.0,  radius: 0.025, speed: 9.0,  colorIdx: 10, count: 40 },
+    { planetIdx: 5, name: 'europa',  orbit: 2.8,  radius: 0.022, speed: 5.5,  colorIdx: 11, count: 40 },
+    { planetIdx: 5, name: 'ganymede', orbit: 3.8,  radius: 0.035, speed: 3.5,  colorIdx: 10, count: 50 },
+    { planetIdx: 5, name: 'callisto', orbit: 5.0,  radius: 0.030, speed: 2.0,  colorIdx: 12, count: 45 },
+    { planetIdx: 6, name: 'mimas',    orbit: 2.2,  radius: 0.015, speed: 11.0, colorIdx: 13, count: 30 },
+    { planetIdx: 6, name: 'enceladus',orbit: 2.8, radius: 0.012, speed: 8.0,  colorIdx: 14, count: 30 },
+    { planetIdx: 6, name: 'tethys',   orbit: 3.5,  radius: 0.020, speed: 6.0,  colorIdx: 13, count: 35 },
+    { planetIdx: 6, name: 'dione',    orbit: 4.2,  radius: 0.018, speed: 4.5,  colorIdx: 13, count: 35 },
+    { planetIdx: 6, name: 'rhea',     orbit: 5.0,  radius: 0.022, speed: 3.0,  colorIdx: 13, count: 40 },
+    { planetIdx: 6, name: 'titan',    orbit: 7.0,  radius: 0.040, speed: 1.8,  colorIdx: 15, count: 60 },
+    { planetIdx: 6, name: 'iapetus',  orbit: 9.5,  radius: 0.018, speed: 0.8,  colorIdx: 13, count: 35 },
+    { planetIdx: 7, name: 'miranda',  orbit: 2.0,  radius: 0.012, speed: 7.0,  colorIdx: 16, count: 30 },
+    { planetIdx: 7, name: 'ariel',    orbit: 3.0,  radius: 0.020, speed: 4.5,  colorIdx: 16, count: 35 },
+    { planetIdx: 7, name: 'umbriel',  orbit: 4.0,  radius: 0.018, speed: 3.0,  colorIdx: 16, count: 35 },
+    { planetIdx: 7, name: 'titania',  orbit: 5.0,  radius: 0.025, speed: 2.0,  colorIdx: 16, count: 40 },
+    { planetIdx: 7, name: 'oberon',   orbit: 6.5,  radius: 0.022, speed: 1.2,  colorIdx: 16, count: 40 },
+    { planetIdx: 8, name: 'triton',   orbit: 3.5,  radius: 0.035, speed: 4.5,  colorIdx: 17, count: 50 },
+  ];
+
+  const MOON_COLORS = [
+    [200, 200, 210],
+    [255, 200, 150],
+    [180, 160, 140],
+    [240, 220, 200],
+    [160, 150, 140],
+    [220, 200, 180],
+    [180, 170, 160],
+    [200, 195, 185],
+    [230, 240, 255],
+    [220, 180, 140],
   ];
 
   /* ─── Point Cloud Generation ─── */
@@ -151,6 +187,10 @@
       const rings = p.rings ? ringPoints(p.radius * 1.5, p.radius * 3.0, 280) : null;
       allPoints.push({ pts, rings });
     }
+    for (const m of MOONS) {
+      const pts = spherePoints(m.radius, m.count);
+      allPoints.push({ pts });
+    }
   }
 
   /* ─── Orbit Paths ─── */
@@ -170,24 +210,48 @@
     }
   }
 
-  /* ─── Ambient Numbers ─── */
-  const AMB_N = 70;
-  let amb = [];
-  function seedAmb() {
-    amb = [];
-    for (let i = 0; i < AMB_N; i++) {
-      amb.push({
+  /* ─── Stars ─── */
+  const STAR_N = 200;
+  let stars = [];
+  function seedStars() {
+    stars = [];
+    for (let i = 0; i < STAR_N; i++) {
+      stars.push({
         x: rnd(0, W), y: rnd(0, H),
-        vx: rnd(-0.015, 0.015), vy: rnd(-0.01, 0.01),
-        a: rnd(0.015, 0.05),
+        a: rnd(0.2, 0.7), sz: rnd(8, 14),
       });
     }
+  }
+
+  /* ─── Shooting Stars ─── */
+  const SHOOTING_N = 3;
+  let shootingStars = [];
+  function seedShootingStars() {
+    shootingStars = [];
+    for (let i = 0; i < SHOOTING_N; i++) {
+      shootingStars.push({
+        x: rnd(0, W), y: rnd(0, H * 0.5),
+        dx: rnd(1.5, 3), dy: rnd(1.5, 3),
+        len: rnd(40, 80), a: rnd(0.4, 0.8),
+        life: 0, maxLife: rnd(60, 150),
+      });
+    }
+  }
+  function resetShootingStar(s) {
+    s.x = rnd(-20, W + 20);
+    s.y = rnd(-20, H * 0.3);
+    s.dx = rnd(1.5, 3);
+    s.dy = rnd(1.5, 3);
+    s.len = rnd(40, 80);
+    s.a = rnd(0.4, 0.8);
+    s.life = 0;
+    s.maxLife = rnd(60, 150);
   }
 
   const FN = '"JetBrains Mono","SF Mono",ui-monospace,monospace';
 
   /* ─── Mouse State ─── */
-  let curX = -9999, curY = -9999, active = false;
+  let curX = -9999, curY = -9999, active = true;
   let smX = -9999, smY = -9999;
 
   window.addEventListener('mousemove', e => { curX = e.clientX; curY = e.clientY; active = true; });
@@ -203,12 +267,13 @@
   /* ─── Attraction State ─── */
   let attractedIdx = -1;
   let attractFactor = 0;
-  const ATTRACT_THRESH = 150;
-  const RELEASE_THRESH = 220;
+  const ATTRACT_THRESH = 50;
+  const RELEASE_THRESH = 20;
 
   /* ─── Orbital & Rotation Angles ─── */
   const orbitAngles = [0, 0, 1.0, 2.5, 4.0, 1.8, 3.2, 0.5, 5.0];
   const rotAngles = new Array(PLANETS.length).fill(0);
+  const moonAngles = new Array(MOONS.length).fill(0).map((_, i) => rnd(0, Math.PI * 2));
 
   /* ─── Planet world position (inclined orbit) ─── */
   function planetWorldPos(orbit, angle, tiltDeg) {
@@ -241,6 +306,9 @@
     for (let i = 0; i < PLANETS.length; i++) {
       rotAngles[i] += dt * PLANETS[i].rotSpeed * 1.5;
     }
+    for (let i = 0; i < MOONS.length; i++) {
+      moonAngles[i] += dt * MOONS[i].speed * 0.15;
+    }
 
     /* camera rotation */
     const ry = time * 0.00006;
@@ -254,6 +322,20 @@
       } else {
         worldPositions.push(planetWorldPos(PLANETS[i].orbit, orbitAngles[i], PLANETS[i].tilt));
       }
+    }
+
+    /* compute moon world positions */
+    const moonWorldPositions = [];
+    for (let mi = 0; mi < MOONS.length; mi++) {
+      const m = MOONS[mi];
+      const parent = worldPositions[m.planetIdx];
+      const pTilt = PLANETS[m.planetIdx].tilt * Math.PI / 180;
+      const moonOrbitDist = m.orbit * m.radius * 4;
+      moonWorldPositions.push({
+        x: parent.x + moonOrbitDist * Math.cos(moonAngles[mi]),
+        y: parent.y + moonOrbitDist * Math.sin(moonAngles[mi]) * Math.sin(pTilt),
+        z: parent.z + moonOrbitDist * Math.sin(moonAngles[mi]) * Math.cos(pTilt),
+      });
     }
 
     /* ── project planet centers for attraction check ── */
@@ -294,16 +376,32 @@
       mouseWorld = { x: mw[0], y: mw[1], z: mw[2] };
     }
 
-    /* ── ambient numbers ── */
-    for (const a of amb) {
-      a.x += a.vx + Math.sin(time * 0.0001 + a.y * 0.002) * 0.01;
-      a.y += a.vy + Math.cos(time * 0.00008 + a.x * 0.002) * 0.006;
-      if (a.x < -50 || a.x > W + 50 || a.y < -50 || a.y > H + 50) {
-        a.x = rnd(0, W); a.y = rnd(0, H);
+    /* ── stars ── */
+    for (const s of stars) {
+      ctx.font = `${s.sz}px ${FN}`;
+      ctx.fillStyle = rgba(WHITE, s.a);
+      ctx.fillText('*', s.x, s.y);
+    }
+
+    /* ── shooting stars ── */
+    for (const s of shootingStars) {
+      if (s.life < s.maxLife) {
+        const alpha = s.life < 10 ? s.life / 10 : (s.life > s.maxLife - 20 ? (s.maxLife - s.life) / 20 : 1) * s.a;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x - s.dx * s.len / Math.sqrt(s.dx * s.dx + s.dy * s.dy) * 0.3, s.y - s.dy * s.len / Math.sqrt(s.dx * s.dx + s.dy * s.dy) * 0.3);
+        ctx.strokeStyle = rgba(WHITE, alpha);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.font = `${12}px ${FN}`;
+        ctx.fillStyle = rgba(WHITE, alpha);
+        ctx.fillText('*', s.x, s.y);
+        s.x += s.dx;
+        s.y += s.dy;
+        s.life++;
+      } else {
+        resetShootingStar(s);
       }
-      ctx.font = `10px ${FN}`;
-      ctx.fillStyle = rgba(FAINT, a.a);
-      ctx.fillText('0', a.x, a.y);
     }
 
     /* ── orbit paths ── */
@@ -414,15 +512,57 @@
       }
     }
 
+    /* ── render moons ── */
+    for (let mi = 0; mi < MOONS.length; mi++) {
+      const m = MOONS[mi];
+      const mCloud = allPoints[PLANETS.length + mi];
+      const mp = moonWorldPositions[mi];
+      const color = MOON_COLORS[m.colorIdx - 9] || [200, 200, 200];
+
+      const mca = Math.cos(moonAngles[mi] * 2), msa = Math.sin(moonAngles[mi] * 2);
+      for (const pt of mCloud.pts) {
+        const lx = pt.x * mca - pt.z * msa;
+        const lz = pt.x * msa + pt.z * mca;
+        const [rx2, ry2, rz] = rot(mp.x + lx, mp.y + pt.y, mp.z + lz, ry, rx);
+        const [sx, sy, , d] = proj(rx2, ry2, rz);
+
+        const dn = cap((rz + 3.5) / 7.0, 0, 1);
+        const da = 1 - dn * 0.85;
+        const shim = 0.85 + Math.sin(time * 0.001 * pt.sf + pt.phase) * 0.15;
+        let alpha = 0.5 * da * shim;
+        if (alpha < 0.01) continue;
+
+        const ddx = sx - smX, ddy = sy - smY;
+        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+        let drawX = sx, drawY = sy;
+        let drawAlpha = alpha;
+        let drawColor = color;
+
+        if (dist < cursorR) {
+          const strength = 1 - dist / cursorR;
+          const s2 = strength * strength;
+          const push = s2 * cursorR * 0.35;
+          const ang = Math.atan2(ddy, ddx);
+          drawX += Math.cos(ang) * push;
+          drawY += Math.sin(ang) * push;
+          drawAlpha = cap(drawAlpha + s2 * 0.5, 0, 0.95);
+          if (s2 > 0.15) drawColor = GREEN;
+        }
+
+        vis.push({ sx: drawX, sy: drawY, rz, alpha: drawAlpha, color: drawColor, d });
+      }
+    }
+
     /* depth sort back→front */
     vis.sort((a, b) => b.rz - a.rz);
 
     /* draw all particles */
+    const isMobile = W < 768;
     for (const v of vis) {
-      const sz = Math.max(9, Math.round(14 * v.d));
+      const sz = Math.max(isMobile ? 11 : 9, Math.round((isMobile ? 18 : 14) * v.d));
       ctx.font = `${sz}px ${FN}`;
       ctx.fillStyle = rgba(v.color, cap(v.alpha, 0, 0.95));
-      ctx.fillText('0', v.sx, v.sy);
+      ctx.fillText('.', v.sx, v.sy);
     }
 
     /* ── sun glow ── */
@@ -439,31 +579,6 @@
       ctx.shadowBlur = 0;
     }
 
-    /* ── planet labels ── */
-    // for (let i = 1; i < PLANETS.length; i++) {
-    //   const p = PLANETS[i];
-    //   let cx, cy, cz;
-    //   if (i === attractedIdx && mouseWorld) {
-    //     const local = planetWorldPos(p.orbit, orbitAngles[i], p.tilt);
-    //     cx = mix(0, mouseWorld.x, attractFactor) + local.x;
-    //     cy = mix(0, mouseWorld.y, attractFactor) + local.y;
-    //     cz = mix(0, mouseWorld.z, attractFactor) + local.z;
-    //   } else {
-    //     cx = worldPositions[i].x;
-    //     cy = worldPositions[i].y;
-    //     cz = worldPositions[i].z;
-    //   }
-    //   const [rx2, ry2, rz] = rot(cx + p.radius * 1.4, cy, cz, ry, rx);
-    //   const [sx, sy, , d] = proj(rx2, ry2, rz);
-    //   const dn = cap((rz + 3.5) / 7.0, 0, 1);
-    //   const da = 1 - dn * 0.85;
-    //   if (da < 0.08) continue;
-    //   const sz = Math.max(8, Math.round(10 * d));
-    //   ctx.font = `${sz}px ${FN}`;
-    //   ctx.fillStyle = rgba(dn > 0.55 ? TEAL : GREY, 0.35 * da);
-    //   ctx.fillText(p.name, sx, sy);
-    // }
-
     requestAnimationFrame(frame);
   }
 
@@ -471,7 +586,8 @@
   resize();
   generateClouds();
   generateOrbits();
-  seedAmb();
-  window.addEventListener('resize', () => { resize(); seedAmb(); });
+  seedStars();
+  seedShootingStars();
+  window.addEventListener('resize', () => { resize(); seedStars(); seedShootingStars(); });
   requestAnimationFrame(frame);
 })();
