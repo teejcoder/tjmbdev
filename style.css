@@ -258,6 +258,7 @@ nav {
   text-transform: lowercase;
   letter-spacing: 0.02em;
   color: var(--fg-faint);
+  padding-bottom: 1rem;
 }
 
 .article-title {
