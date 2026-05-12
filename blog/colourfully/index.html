@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>colourfully - tjmb</title>
+  <meta name="description" content="software engineer" />
+  <link rel="canonical" href="https://tjmb.dev/blog/master-cobblers" />
+
+  <meta property="og:title" content="projects" />
+  <meta property="og:description" content="software engineer" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://tjmb.dev/blog/master-cobblers" />
+  <meta property="og:image" content="https://tjmb.dev/og.png" />
+  <meta property="og:site_name" content="tjmb" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="projects" />
+  <meta name="twitter:description" content="software engineer" />
+  <meta name="twitter:image" content="https://tjmb.dev/og.png" />
+
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="2f1dca37-fc82-4066-8cc2-57d70ca3c457"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <nav>
+    <a href="/" class="brand">tjmb</a>
+    <div class="nav-links">
+      <a href="/blog/">blog</a>
+      <a href="/projects/">projects</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <article class="article-post-card">
+      <p class="article-eyebrow">technical deep-dive</p>
+      <span class="article-date">May 12, 2026</span>
+      <h1 class="article-title">Building Colourfully: AI-Powered Colour Palette Extraction with Next.js, Azure, and
+        Cloudinary.</h1>
+
+      <p class="article-intro">
+        Colour is one of the most essential elements in design and photography.
+        It sets mood, communicates brand, and guides attention. So when I set
+        out to build Colourfully, a tool that extracts and analyses the colour
+        palette of any image, I wanted it to go deeper than a simple
+        pixel-counter. I wanted it to think about colour the way a designer
+        would.
+        <br /><br />
+        Here's a technical deep-dive into how it all came together.
+      </p>
+
+      <!-- ─── What Colourfully Does ─────────────────────────────────────── -->
+      <h2 class="article-heading">What Colourfully Does</h2>
+
+      <p class="article-paragraph">Colourfully lets you upload an image and instantly receive:</p>
+
+      <ul class="article-list">
+        <li class="article-list-item"><span class="article-bold">Dominant colour analysis</span>: foreground,
+          background, and accent colours identified by AI</li>
+        <li class="article-list-item"><span class="article-bold">Full palette extraction</span>: every meaningful colour
+          in the image, with RGB values and relative prominence</li>
+        <li class="article-list-item"><span class="article-bold">Persistent results</span>: your last analysis is saved
+          locally so you can revisit it without re-uploading.</li>
+      </ul>
+
+      <p class="article-paragraph">The interface is intentionally minimal: drag your image in, and the palette appears.
+      </p>
+
+      <!-- ─── Tech Stack ─────────────────────────────────────────────────── -->
+      <h2 class="article-heading">Tech Stack</h2>
+
+      <p class="article-paragraph">The project runs on a modern, production-grade stack:</p>
+
+      <div class="article-table-wrap">
+        <table class="article-table">
+          <thead>
+            <tr>
+              <th>layer</th>
+              <th>technology</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Framework</td>
+              <td>Next.js 15.3 with React 19</td>
+            </tr>
+            <tr>
+              <td>Language</td>
+              <td>TypeScript 5</td>
+            </tr>
+            <tr>
+              <td>Styling</td>
+              <td>Tailwind CSS 4.1</td>
+            </tr>
+            <tr>
+              <td>Animations</td>
+              <td>Framer Motion 12</td>
+            </tr>
+            <tr>
+              <td>Image hosting</td>
+              <td>Cloudinary 2.6</td>
+            </tr>
+            <tr>
+              <td>AI (colour scheme)</td>
+              <td>Azure Computer Vision</td>
+            </tr>
+            <tr>
+              <td>Palette</td>
+              <td>Node Vibrant 4.0</td>
+            </tr>
+            <tr>
+              <td>Deployment</td>
+              <td>Vercel</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="article-paragraph">
+        Next.js 15 ships with the App Router and React Server Components, which means I get file-system routing,
+        server-side API logic, and frontend rendering all in one cohesive mental model. Turbopack handles dev
+        builds, which keeps the feedback loop tight during development.
+      </p>
+
+      <!-- ─── Two-Layer AI Strategy ──────────────────────────────────────── -->
+      <h2 class="article-heading">The Two-Layer AI Strategy</h2>
+
+      <p class="article-paragraph">
+        The most interesting architectural decision in Colourfully is the dual-approach to colour analysis.
+        Rather than relying on a single service, the app runs two complementary tools in parallel and merges
+        their results.
+      </p>
+
+      <h3 class="article-subheading">Layer 1: Azure Computer Vision</h3>
+
+      <p class="article-paragraph">
+        Microsoft's Computer Vision API handles the semantic side of colour analysis. It doesn't just count pixels,
+        it understands the structure of an image: what's foreground, what's background, and what the most
+        eye-catching accent colour is.
+      </p>
+
+      <p class="article-paragraph">
+        The integration lives in <code class="article-inline-code">src/app/utils/azure.ts</code>. The client is
+        initialised with Cognitive
+        Services credentials:
+      </p>
+
+      <pre class="article-code-block">const computerVisionClient = new ComputerVisionClient(
+          new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': key } }),
+          endpoint
+        );</pre>
+
+      <p class="article-paragraph">And the actual call requests only the <code class="article-inline-code">Colour</code>
+        visual feature to keep latency low:</p>
+
+      <pre class="article-code-block">const result = await computerVisionClient.analyzeImage(imageUrl, {
+  visualFeatures: ['Color']
+});</pre>
+
+      <p class="article-paragraph">This returns structured data:</p>
+
+      <ul class="article-list">
+        <li class="article-list-item"><code class="article-inline-code">dominantColorForeground</code></li>
+        <li class="article-list-item"><code class="article-inline-code">dominantColorBackground</code></li>
+        <li class="article-list-item"><code class="article-inline-code">accentColor</code></li>
+      </ul>
+
+      <p class="article-paragraph">The three colours a designer actually cares about when reviewing a palette.</p>
+
+      <p class="article-paragraph">
+        One practical detail: Azure requires HTTPS URLs, so the code validates this before making the request.
+        This is where Cloudinary becomes essential.
+      </p>
+
+      <h3 class="article-subheading">Layer 2: Node Vibrant</h3>
+
+      <p class="article-paragraph">
+        While Azure gives you the semantic picture, Node Vibrant gives you the complete one. It runs a full
+        palette extraction pass over the image and returns named swatches:
+      </p>
+
+      <ul class="article-list">
+        <li class="article-list-item"><code class="article-inline-code">Vibrant</code></li>
+        <li class="article-list-item"><code class="article-inline-code">Muted</code></li>
+        <li class="article-list-item"><code class="article-inline-code">DarkMuted</code></li>
+        <li class="article-list-item"><code class="article-inline-code">LightVibrant</code></li>
+      </ul>
+
+      <p>and so on. Each with RGB values and a population count indicating how much of the image
+        that colour occupies.
+      </p>
+
+
+      <pre class="article-code-block">const palette = await Vibrant.from(imageUrl).getPalette();
+      // Returns: { Vibrant: { rgb: [r, g, b], population: n }, ... }</pre>
+
+      <p class="article-paragraph">
+        The two results are combined in the <code class="article-inline-code">/api/analyse</code> route and returned to
+        the frontend as a single unified payload. Azure tells you what colour means in the image; Vibrant tells you everything
+        that's there.
+      </p>
+
+      <!-- ─── Cloudinary Integration ─────────────────────────────────────── -->
+      <h2 class="article-heading">Cloudinary Integration</h2>
+
+      <p class="article-paragraph">
+        Before any analysis can happen, the image needs to live somewhere on the internet with a stable HTTPS
+        URL. That's Cloudinary's job.
+      </p>
+
+      <p class="article-paragraph">
+        The upload flow (<code class="article-inline-code">/api/upload</code>) receives the image as a FormData payload,
+        converts it to a
+        Node.js Buffer, and streams it directly to Cloudinary:
+      </p>
+
+      <pre class="article-code-block">const result = await new Promise&lt;CloudinaryUploadResult&gt;((resolve, reject) =&gt; {
+  cloudinary.uploader.upload_stream(
+    { resource_type: 'image' },
+    (error, result) =&gt; {
+      if (error || !result) return reject(error);
+      resolve(result);
+    }
+  ).end(buffer);
+});</pre>
+
+      <p class="article-paragraph">
+        Streaming the buffer (rather than writing to disk) keeps the serverless function stateless and avoids
+        unnecessary I/O. Cloudinary returns a <code class="article-inline-code">secure_url</code>, a fully CDN-served
+        HTTPS image URL, which is then passed directly to the analysis endpoints.
+      </p>
+
+      <p class="article-paragraph">
+        I also configured Cloudinary's domain in <code class="article-inline-code">next.config.ts</code> so Next.js's
+        <code class="article-inline-code">&lt;Image&gt;</code> component can optimise Cloudinary-hosted images with
+        automatic resizing and format conversion.
+      </p>
+
+      <!-- ─── Performance ────────────────────────────────────────────────── -->
+      <h2 class="article-heading">Performance Characteristics</h2>
+
+      <h3 class="article-subheading">Parallel API Calls</h3>
+      <p class="article-paragraph">
+        The <code class="article-inline-code">/api/analyse</code> route fires both the Azure and Vibrant calls
+        simultaneously rather than waiting for one before starting the other. This cuts the round-trip time roughly in half for the most latency-sensitive part of the app.
+      </p>
+
+      <h3 class="article-subheading">localStorage Caching</h3>
+      <p class="article-paragraph">
+        Analysis results are persisted to <code class="article-inline-code">localStorage</code> on completion. If you
+        close the tab and
+        come back, your palette is still there. For a tool people use iteratively while working on a design,
+        this eliminates a lot of unnecessary re-uploads.
+      </p>
+
+      <pre class="article-code-block">localStorage.setItem("analysisResult", JSON.stringify(analysisResult));</pre>
+
+      <h3 class="article-subheading">Canvas Animation</h3>
+      <p class="article-paragraph">
+        The home page features a vortex particle animation. 1,000–2,000 particles driven by simplex noise,
+        rendered on a <code class="article-inline-code">&lt;canvas&gt;</code> element with <code
+          class="article-inline-code">requestAnimationFrame</code>. The
+        particle state is stored in <code class="article-inline-code">Float32Array</code> buffers for memory efficiency.
+        Despite looking
+        visually rich, it stays off the main thread and doesn't block the UI.
+      </p>
+
+      <h3 class="article-subheading">Upload Validation</h3>
+      <p class="article-paragraph">
+        Files are validated client-side before upload: JPEG, PNG, and WebP only, with a 5MB cap. This prevents
+        unnecessary round-trips to the server for files that would fail anyway.
+      </p>
+
+      <!-- ─── Auth ──────────────────────────────────────────────────────── -->
+      <h2 class="article-heading">Authentication with Clerk</h2>
+
+      <p class="article-paragraph">
+        Auth is handled by Clerk, integrated at the root layout level. The middleware is configured but
+        permissive, you don't need an account to use Colourfully. Authenticated users get a user menu;
+        unauthenticated visitors get Sign In / Sign Up buttons. The analysis feature is fully public.
+      </p>
+
+      <p class="article-paragraph">
+        This was a deliberate choice as friction is the enemy of tools like this. If someone wants to extract a
+        palette, they should be able to do it immediately.
+      </p>
+
+      <!-- ─── Analytics ─────────────────────────────────────────────────── -->
+      <h2 class="article-heading">Analytics</h2>
+
+      <p class="article-paragraph">Vercel Analytics is wired into the root layout with a single component:</p>
+
+      <pre class="article-code-block">&lt;Analytics /&gt;</pre>
+
+      <p class="article-paragraph">
+        That's all. On a Vercel deployment, this gives automatic tracking of page views, route transitions, and
+        Core Web Vitals (LCP, CLS, FID), with no configuration required.
+      </p>
+
+      <!-- ─── Architecture ──────────────────────────────────────────────── -->
+      <h2 class="article-heading">Architecture at a Glance</h2>
+
+      <div class="article-arch-block">User drops image
+        ↓
+        POST /api/upload
+        → Validates file type and size
+        → Streams buffer to Cloudinary
+        → Returns secure_url
+        ↓
+        POST /api/analyse
+        → Azure Computer Vision ─┐
+        → Node Vibrant ─┤ parallel
+        ↓
+        → Merge results
+        → Return { colorScheme, palette }
+        ↓
+        Frontend renders palette
+        → Stores result in localStorage</div>
+
+      <p class="article-paragraph">
+        The API surface is small by intention: two routes, clearly separated concerns, typed inputs and outputs
+        throughout.
+      </p>
+
+      <!-- ─── Comparison Table ──────────────────────────────────────────── -->
+      <h2 class="article-heading">Comparing the Two Services</h2>
+
+      <div class="article-table-wrap">
+        <table class="article-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Azure Computer Vision</th>
+              <th>Node Vibrant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Type</td>
+              <td>Cloud API (paid)</td>
+              <td>Open-source library</td>
+            </tr>
+            <tr>
+              <td>Output</td>
+              <td>Semantic colour roles</td>
+              <td>Full spectrum palette</td>
+            </tr>
+            <tr>
+              <td>Speed</td>
+              <td>Network-bound</td>
+              <td>CPU-bound (fast)</td>
+            </tr>
+            <tr>
+              <td>Requires URL</td>
+              <td>Yes (HTTPS)</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Best for</td>
+              <td>Foreground/background/accent</td>
+              <td>Complete palette extraction</td>
+            </tr>
+            <tr>
+              <td>Cost</td>
+              <td>Per-call pricing</td>
+              <td>Free</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="article-paragraph">
+        These two are complementary. Azure tells you which colours matter and why; Vibrant tells you all the
+        colours that exist. Together they give a complete picture.
+      </p>
+
+      <!-- ─── What's Next ────────────────────────────────────────────────── -->
+      <h2 class="article-heading">What I'd Build Next</h2>
+
+      <p class="article-paragraph">A few directions worth exploring:</p>
+
+      <ul class="article-list">
+        <li class="article-list-item"><span class="article-bold">Export formats</span>: download the palette as a CSS
+          custom properties file, a Figma token JSON, or an Adobe Swatch</li>
+        <li class="article-list-item"><span class="article-bold">Side-by-side comparison</span>: analyse two images and
+          diff their palettes</li>
+        <li class="article-list-item"><span class="article-bold">History</span>: persist multiple past analyses with
+          Clerk's user accounts, not just the most recent one</li>
+        <li class="article-list-item"><span class="article-bold">Palette naming</span>: use an LLM to generate a
+          human-readable name for the palette ("Coastal Dusk", "Industrial Steel")</li>
+      </ul>
+
+      <!-- ─── Conclusion ─────────────────────────────────────────────────── -->
+      <h2 class="article-heading">Conclusion</h2>
+
+      <p class="article-paragraph">
+        Colourfully is a small project, but it touches a lot of real-world concerns: cloud storage, AI
+        APIs, authentication, performance optimisation, and a polished UI.
+      </p>
+
+      <p class="article-paragraph">
+        The tech choices were driven by pragmatism. Cloudinary for reliable image hosting, Azure for semantic
+        intelligence, Vibrant for completeness, Clerk for auth without infrastructure overhead, and Vercel for
+        deployment without ops.
+      </p>
+
+      <p class="article-paragraph">
+        If you want to extract the palette from an image right now, give it a try at
+        <a href="https://colourfully.vercel.app" target="_blank" rel="noopener">colourfully.vercel.app</a>.
+      </p>
+
+      <div class="article-footer">
+        Built with Next.js 15, React 19, TypeScript, Tailwind CSS, Azure Cognitive Services, Cloudinary,
+        Clerk, and Node Vibrant.
+      </div>
+
+    </article>
+  </main>
+</body>
+
+</html>
