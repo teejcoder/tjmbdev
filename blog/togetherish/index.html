@@ -4,24 +4,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>colourfully</title>
-  <meta name="description" content="software engineer" />
-  <link rel="canonical" href="https://tjmb.dev/blog/colourfully" />
-
-  <meta property="og:title" content="projects" />
-  <meta property="og:description" content="software engineer" />
+  <title>togetherish - tjmb</title>
+  <meta name="description"
+    content="a technical deep-dive into togetherish, an async-first team communications dashboard" />
+  <link rel="canonical" href="https://tjmb.dev/blog/togetherish" />
+  <meta property="og:title" content="togetherish technical analysis" />
+  <meta property="og:description"
+    content="a technical deep-dive into togetherish, an async-first team communications dashboard" />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://tjmb.dev/blog/colourfully" />
+  <meta property="og:url" content="https://tjmb.dev/blog/togetherish" />
   <meta property="og:image" content="https://tjmb.dev/og.png" />
   <meta property="og:site_name" content="tjmb" />
-
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="projects" />
-  <meta name="twitter:description" content="software engineer" />
+  <meta name="twitter:title" content="togetherish technical analysis" />
+  <meta name="twitter:description"
+    content="a technical deep-dive into togetherish, an async-first team communications dashboard" />
   <meta name="twitter:image" content="https://tjmb.dev/og.png" />
-
   <script defer src="https://cloud.umami.is/script.js" data-website-id="2f1dca37-fc82-4066-8cc2-57d70ca3c457"></script>
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -38,21 +37,484 @@
       <a href="/projects/">projects</a>
     </div>
   </nav>
-
   <main class="container">
-    <aside class="article-post-card">
-      <span class="article-date">May 7, 2026</span>
-      <h1 class="article-title">Lorem ipsum dolor sit amet.</h1>
-      <p class="article-paragraph"><span class="article-bold">Lorem ipsum</span> dolor sit amet consectetur adipisicing elit.</p>
-      <p class="article-paragraph">Perspiciatis nostrum
-        temporibus facilis minima. Officiis assumenda numquam quos minus accusantium atque nostrum perferendis tempora,
-        odit ad voluptate quod eligendi nihil expedita?</p>
-      <p class="article-paragraph"><span class="article-bold">Lorem ipsum</span> dolor sit amet.</p>
-      <p class="article-paragraph">Consectetur adipisicing elit. Molestias quo, eaque accusamus, dolor facere rerum
-        alias tenetur possimus beatae, exercitationem quas molestiae quod aperiam at sapiente ea voluptates in delectus!
-        Aspernatur iusto voluptate sint aliquam excepturi, quasi voluptatibus aut tempora saepe, recusandae veniam
-        dignissimos eum ducimus? Eaque blanditiis eligendi expedita.</p>
-    </aside>
+    <article class="article-post-card">
+      <p class="article-eyebrow">technical deepdive</p>
+      <span class="article-date">May 14, 2026</span>
+      <h1 class="article-title">Analysing Togetherish: An Async-First Team Communications Dashboard Built with Next.js,
+        Supabase, and TypeScript.</h1>
+      <p class="article-intro">
+        Togetherish is an async-first communications dashboard for small remote teams (2-10 people).
+        Its core philosophy is <span class="article-bold">alignment, not engagement</span>. It is deliberately
+        positioned as a lightweight alternative to Slack, Notion, Teams, and Basecamp for creative studios,
+        freelance collectives, and micro remote teams.
+        <br /><br />
+        Rather than replicating Slack-style real-time chat or Notion-style project management, Togetherish focuses on
+        four async primitives:
+        daily check-ins, team announcements, important links, and team pulse (omitted for MVP). This constraint keeps
+        the feature surface small, which makes the codebase readable and worth studying.
+        <br /><br />
+        Here is a technical deep-dive into how it works under the hood.
+      </p>
+      <h2 class="article-heading">What Togetherish Does</h2>
+      <p class="article-paragraph">Togetherish lets small teams stay aligned with four core features:</p>
+      <ul class="article-list">
+        <li class="article-list-item"><span class="article-bold">Daily check-ins</span>: each member answers "what did
+          you do yesterday?", "what are you doing today?", and "any blockers?", plus a 1-5 sentiment rating. One
+          check-in per person per day, editable only on the same day.</li>
+        <li class="article-list-item"><span class="article-bold">Announcements</span>: admin-published broadcasts
+          visible to the whole team. A simple title-and-body format with no threading or reactions.</li>
+        <li class="article-list-item"><span class="article-bold">Important links</span>: a curated, admin-managed set of
+          quick-access URLs for the team.</li>
+        <li class="article-list-item"><span class="article-bold">Team pulse</span>: aggregate sentiment scores and
+          check-in participation rates displayed on the dashboard</li>
+      </ul>
+      <p class="article-paragraph">The interface is a single dashboard view: announcements full-width at the top,
+        check-in feed on the left, important links on the right, and an admin panel tucked inside a dialog.</p>
+      <h2 class="article-heading">Tech Stack</h2>
+      <div class="article-table-wrap">
+        <table class="article-table">
+          <thead>
+            <tr>
+              <th>layer</th>
+              <th>technology</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Framework</td>
+              <td>Next.js 15.5 with React 19.1</td>
+            </tr>
+            <tr>
+              <td>Language</td>
+              <td>TypeScript 5.9</td>
+            </tr>
+            <tr>
+              <td>Database</td>
+              <td>Supabase (PostgreSQL) with Row-Level Security</td>
+            </tr>
+            <tr>
+              <td>Auth</td>
+              <td>Supabase Auth (email/password + magic link)</td>
+            </tr>
+            <tr>
+              <td>Styling</td>
+              <td>Tailwind CSS 4.1 + Shadcn/UI (Radix primitives)</td>
+            </tr>
+            <tr>
+              <td>Forms</td>
+              <td>react-hook-form + Zod 4</td>
+            </tr>
+            <tr>
+              <td>Email</td>
+              <td>Resend + React Email</td>
+            </tr>
+            <tr>
+              <td>Animations</td>
+              <td>Framer Motion 12</td>
+            </tr>
+            <tr>
+              <td>Deployment</td>
+              <td>Vercel</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="article-paragraph">
+        Next.js 15 provides file-system routing via the App Router, server-side API route handlers under app/api/, and
+        React Server Components for data fetching, all in a single framework. Turbopack handles dev builds.
+        TypeScript 5.9 runs in strict mode across the entire codebase.
+      </p>
+      <h2 class="article-heading">Architecture at a Glance</h2>
+      <div class="article-arch-block">User hits /dashboard
+        ↓
+        Server Component
+        → DashboardService.getDashboardForUser(userId, teamId?)
+        → Returns full DashboardPayload
+        ↓
+        DashboardClient (use client)
+        → Receives initialData as props
+        → Renders check-in feed, announcements, links, team toggle
+        → All mutations call API routes, then router.refresh()
+        ↓
+        API Routes
+        → Authenticate → Verify membership → Delegate to Service
+        → Service → Supabase query (RLS enforced) → Return response
+        ↓
+        Database (PostgreSQL + RLS)
+        → Tables: users, teams, team_members, checkins,
+        announcements, important_links, invitations
+        → Soft delete everywhere (deleted_at)
+        → Trigger-based team capacity enforcement</div>
+      <p class="article-paragraph">
+        Every layer has a distinct responsibility. Server components fetch and pass data down. Client components handle
+        interactivity. API routes are thin authentication and authorisation layers that delegate to service classes. And
+        the database enforces invariants at the storage level through RLS and triggers.
+      </p>
+      <h2 class="article-heading">The Service Layer Pattern</h2>
+      <p class="article-paragraph">
+        The defining architectural decision in Togetherish is the service layer. Business logic lives exclusively in
+        service classes under <code class="article-inline-code">/lib/services/</code>.
+      </p>
+      <p class="article-paragraph">There are seven service classes:</p>
+      <ul class="article-list">
+        <li class="article-list-item"><span class="article-bold">AnnouncementService</span>: CRUD for announcements</li>
+        <li class="article-list-item"><span class="article-bold">CheckinService</span>: daily check-ins with same-day
+          edit enforcement and sentiment tracking</li>
+        <li class="article-list-item"><span class="article-bold">ImportantLinkService</span>: quick-access link
+          management</li>
+        <li class="article-list-item"><span class="article-bold">InvitationService</span>: invitations with
+          auto-assignment and capacity checks</li>
+        <li class="article-list-item"><span class="article-bold">TeamService</span>: team CRUD, membership verification,
+          capacity management</li>
+        <li class="article-list-item"><span class="article-bold">UserService</span>: user profile CRUD with soft delete
+        </li>
+        <li class="article-list-item"><span class="article-bold">DashboardService</span>: optimised dashboard data in
+          exactly 2 queries</li>
+      </ul>
+      <p class="article-paragraph">A typical flow looks like this:</p>
+      <pre class="article-code-block">// API route — thin, delegates immediately
+export async function POST(req: Request, { params }: Props) {
+  return withErrorHandling(async () => {
+    const user = await authenticateUser(req);
+    const body = await req.json();
+    const validated = checkinSchema.parse(body);
+    const checkin = await CheckinService.create(user.id, params.teamId, validated);
+    return successResponse(checkin, "Check-in created");
+  });
+}</pre>
+      <pre class="article-code-block">// Service — all business logic lives here
+export class CheckinService {
+  static async create(userId: string, teamId: string, data: CreateCheckin) {
+    await TeamService.verifyMembership(userId, teamId);
+    const existing = await getTodayCheckin(userId, teamId);
+    if (existing) throw new AppError("Already checked in today", 409);
+    return await db.from("checkins").insert({
+      team_id: teamId, user_id: userId,
+      yesterday: data.yesterday, today: data.today,
+      blockers: data.blockers, sentiment: data.sentiment
+    }).select().single();
+  }
+}</pre>
+      <p class="article-paragraph">
+        This separation means API routes are testable in isolation, services are testable without HTTP, and changing the
+        transport layer (say, moving from REST to GraphQL or tRPC) requires zero business logic changes.
+      </p>
+      <h2 class="article-heading">Dashboard Optimisation: 2 Queries</h2>
+      <p class="article-paragraph">
+        The dashboard is the core of the application, yet <code class="article-inline-code">DashboardService</code>
+        reduces database round-trips to exactly two:
+      </p>
+      <ul class="article-list">
+        <li class="article-list-item"><span class="article-bold">Query 1</span>: fetch the current user and their teams
+          in parallel</li>
+        <li class="article-list-item"><span class="article-bold">Query 2</span>: fetch all team data (members,
+          check-ins, announcements, links, invitations) in parallel using Supabase batched queries</li>
+      </ul>
+      <p class="article-paragraph">
+        This is achieved by structuring the second query as a set of independent <code
+          class="article-inline-code">Promise.all</code> calls, all scoped to the same <code
+          class="article-inline-code">teamId</code>. The result is assembled into a typed <code
+          class="article-inline-code">DashboardPayload</code> and returned to the server component, which passes it as
+        <code class="article-inline-code">initialData</code> to the client.
+      </p>
+      <p class="article-paragraph">
+        Additionally, the frontend caches dashboard data in <code class="article-inline-code">localStorage</code> with a
+        5-minute TTL. Cache keys follow the pattern <code
+          class="article-inline-code">togetherish_{feature}_{teamId}</code>. This means navigating between teams or
+        returning to the dashboard within five minutes can skip the network entirely.
+      </p>
+      <h2 class="article-heading">Soft Delete by Default</h2>
+      <p class="article-paragraph">
+        Every user-data table (users, teams, team_members, checkins, announcements, important_links, invitations) uses
+        soft deletion. A <code class="article-inline-code">deleted_at</code>
+        nullable timestamp column is present on every entity:
+      </p>
+      <ul class="article-list">
+        <li class="article-list-item"><code class="article-inline-code">users</code> additionally uses an <code
+            class="article-inline-code">is_active</code> boolean for a double-delete pattern</li>
+        <li class="article-list-item">Every query <span class="article-bold">must</span> filter <code
+            class="article-inline-code">.is("deleted_at", null)</code></li>
+        <li class="article-list-item">Hard deletes are never used for user-facing data</li>
+      </ul>
+      <p class="article-paragraph">
+        Soft deletion is a well-known pattern and applied here with consistency: all seven user-data
+        tables use a deleted_at column, and every query filters on it. Soft delete gives
+        you recoverability, referential integrity without cascading deletes, and the ability to audit deletions. The
+        trade-off is that every query must remember the filter. The service layer pattern makes this manageable by
+        centralising query construction.
+      </p>
+      <h2 class="article-heading">The Permission Model</h2>
+      <p class="article-paragraph">Three roles, enforced at two layers:</p>
+      <div class="article-table-wrap">
+        <table class="article-table">
+          <thead>
+            <tr>
+              <th>role</th>
+              <th>permissions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Owner</td>
+              <td>Full control with the team creator. Can delete the team, manage all members, promote/demote admins.
+              </td>
+            </tr>
+            <tr>
+              <td>Admin</td>
+              <td>Can manage content (create announcements, manage links, invite members) but cannot delete the team or
+                change ownership.</td>
+            </tr>
+            <tr>
+              <td>Member</td>
+              <td>Can view dashboard, create and edit own check-ins, read announcements and links.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="article-paragraph">
+        Enforcement happens at <span class="article-bold">two levels</span>. In the application layer, service classes
+        call <code class="article-inline-code">TeamService.verifyMembership()</code> and <code
+          class="article-inline-code">TeamService.verifyAdminPermissions()</code> before any write operation. At the
+        database level, PostgreSQL Row-Level Security ensures that unauthorised queries return empty results even if the
+        application layer is bypassed.
+      </p>
+      <pre class="article-code-block">-- Database-level enforcement
+CREATE OR REPLACE FUNCTION is_team_member(team_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM team_members
+    WHERE team_id = $1
+      AND user_id = auth.uid()
+      AND deleted_at IS NULL
+  );
+$$ LANGUAGE sql SECURITY DEFINER;</pre>
+      <p class="article-paragraph">
+        The dual-layer approach is defence-in-depth: the service layer handles ergonomic error messages and structured
+        responses, while RLS acts as a safety net against misconfiguration or bugs.
+      </p>
+      <h2 class="article-heading">Authentication & Invitation Flow</h2>
+      <p class="article-paragraph">
+        Auth is handled by Supabase Auth with email/password and magic link flows. The invitation system is where it
+        gets interesting:
+      </p>
+      <div class="article-arch-block">Admin invites member
+        ↓
+        POST /api/send/[teamId]
+        → Creates invitation record in DB (UUID token, status: pending)
+        → Sends email via Resend with magic link
+        ↓
+        Recipient clicks: /auth/signup?token={invitationToken}
+        → Signs up → Auth callback exchanges code for session
+        → Callback detects invitationToken param
+        → InvitationService.acceptInvitation() runs:
+        → Validates token
+        → Checks team capacity (<= 10 members) → Adds user as "member" → Marks invitation as "accepted" → Redirect to
+          /dashboard</div>
+          <p class="article-paragraph">
+            Team capacity is checked at <span class="article-bold">three</span> points: the application service (before
+            creating the invitation), the application service (before accepting), and a database trigger (<code
+              class="article-inline-code">enforce_team_capacity</code>) that fires on <code
+              class="article-inline-code">BEFORE INSERT</code> on both <code
+              class="article-inline-code">team_members</code> and <code class="article-inline-code">invitations</code>.
+            This guarantees the limit is never exceeded regardless of race conditions or code paths.
+          </p>
+          <h2 class="article-heading">Middleware & Route Protection</h2>
+          <p class="article-paragraph">
+            The Next.js middleware (<code class="article-inline-code">middleware.ts</code>) checks authentication on
+            every request:
+          </p>
+          <pre class="article-code-block">// Middleware logic
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
+  const isPublicPath = ['/', '/pricing', '/auth/signin', '/auth/signup',
+    '/auth/forgot-password', '/contact', '/privacy', '/terms',
+    '/instructions'].includes(pathname);
+  if (!isPublicPath) {
+    return Response.redirect(new URL('/auth/signin', request.url));
+  }
+}
+if (user && isAuthPage(pathname)) {
+  return Response.redirect(new URL('/dashboard', request.url));
+}</pre>
+          <p class="article-paragraph">
+            The middleware is also where CSP headers are set, restricting script sources, style sources, Supabase
+            connect sources, and form actions to prevent XSS.
+          </p>
+          <h2 class="article-heading">Check-in Business Rules</h2>
+          <p class="article-paragraph">
+            The check-in feature has four rules that keep the data model simple:
+          </p>
+          <ul class="article-list">
+            <li class="article-list-item"><span class="article-bold">One per day</span>: enforced by querying for an
+              existing check-in by userId + teamId + today's date before insert. Returns HTTP 409 if one exists.</li>
+            <li class="article-list-item"><span class="article-bold">Edit-once</span>: a check-in can only be edited on
+              the same day it was created. Enforced by checking <code
+                class="article-inline-code">updated_at === created_at</code>.</li>
+            <li class="article-list-item"><span class="article-bold">Soft delete</span>: deleting a check-in sets <code
+                class="article-inline-code">deleted_at</code> rather than removing the row.</li>
+            <li class="article-list-item"><span class="article-bold">Sentiment scale</span>: 1-5 integer, rendered as
+              emoji faces in the UI.</li>
+          </ul>
+          <p class="article-paragraph">
+            These constraints are enforced in <code class="article-inline-code">CheckinService</code> and checked again
+            by the database schema. No client-side logic is trusted.
+          </p>
+          <h2 class="article-heading">Standardised Error Handling</h2>
+          <p class="article-paragraph">
+            Every API route wraps its handler in <code class="article-inline-code">withErrorHandling()</code>, which
+            provides consistent JSON error responses and catches unhandled exceptions. Four helper functions standardise
+            the response format:
+          </p>
+          <ul class="article-list">
+            <li class="article-list-item"><code
+                class="article-inline-code">successResponse(data, message?, status?)</code></li>
+            <li class="article-list-item"><code class="article-inline-code">errorResponse(error, status?)</code></li>
+            <li class="article-list-item"><code class="article-inline-code">validationErrorResponse(zodError)</code>
+            </li>
+            <li class="article-list-item"><code class="article-inline-code">handleApiError(error)</code> -> maps known
+              error types to HTTP status codes</li>
+          </ul>
+          <p class="article-paragraph">
+            Zod schemas validate all inputs at the API route boundary. Invalid payloads return a structured error with
+            field-level messages before any business logic executes. This pattern means the entire API surface has
+            predictable, typed error handling with almost no boilerplate per route.
+          </p>
+          <h2 class="article-heading">Component Tree</h2>
+          <p class="article-paragraph">
+            The component tree follows a strict server-client boundary:
+          </p>
+          <div class="article-arch-block">Server Components (default)
+            ├── /dashboard/page.tsx - fetches data, passes to client
+            ├── Header.tsx - auth-aware nav (reads session server-side)
+            └── Footer.tsx - static content
+            Client Components ("use client")
+            ├── DashboardClient.tsx - orchestrates the entire dashboard
+            ├── CheckinFeed.tsx - form, list, search, edit (825 lines)
+            ├── Announcements.tsx - create/list/delete for admins
+            ├── ImportantLinks.tsx - create/list/delete for admins
+            ├── AdminClient.tsx - dialog-based team management
+            ├── SigninForm.tsx - react-hook-form + Zod
+            └── SignupForm.tsx - registration with invitation token</div>
+          <p class="article-paragraph">
+            Thirteen UI primitives (button, input, dialog, select, badge, avatar, card, tabs, textarea, label, alert,
+            skeleton, sonner) come from Shadcn/UI, which wraps Radix UI primitives. These are never modified directly.
+            The <code class="article-inline-code">cn()</code> utility from <code class="article-inline-code">clsx</code>
+            + <code class="article-inline-code">tailwind-merge</code> handles
+            class composition throughout.
+          </p>
+          <p class="article-paragraph">
+            The <code class="article-inline-code">CheckinFeed.tsx</code> component at 825 lines is the largest
+            component. Followed by <code class="article-inline-code">DashboardClient.tsx</code> at 191 lines. <code
+              class="article-inline-code">DashboardClient.tsx</code> receives typed <code
+              class="article-inline-code">initialData</code>
+            from the server
+            component and manages the whole dashboard state: team toggling, check-in CRUD, announcement management, link
+            management, and the admin panel. Team switching works via URL parameter (<code
+              class="article-inline-code">router.push('/dashboard?teamId=X')</code>), which triggers a server re-render.
+          </p>
+          <h2 class="article-heading">Mobile & Navigation</h2>
+          <p class="article-paragraph">
+            Navigation comprises three components:
+          </p>
+          <ul class="article-list">
+            <li class="article-list-item"><span class="article-bold">Header.tsx</span>: server component with sticky
+              positioning, brand logo, nav links (Dashboard, How to Use, Profile), and auth state (Login vs. Logout
+              buttons). Mobile-responsive with a hamburger toggle.</li>
+            <li class="article-list-item"><span class="article-bold">MobileMenu.tsx</span>: a fullscreen overlay menu
+              rendered via <code class="article-inline-code">createPortal</code>. It dispatches a custom DOM event
+              (<code class="article-inline-code">togetherish:open-profile</code>) to open the profile dialog from
+              outside the React tree.</li>
+            <li class="article-list-item"><span class="article-bold">Footer.tsx</span>: dark footer with brand and
+              links. Minimal.</li>
+          </ul>
+          <h2 class="article-heading">Key Architectural Decisions, Evaluated</h2>
+          <div class="article-table-wrap">
+            <table class="article-table">
+              <thead>
+                <tr>
+                  <th>decision</th>
+                  <th>why it works</th>
+                  <th>trade-off</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Service layer</td>
+                  <td>API routes stay thin; transport-agnostic</td>
+                  <td>More files, more indirection for simple operations</td>
+                </tr>
+                <tr>
+                  <td>Soft delete</td>
+                  <td>Recoverable deletes; no cascading issues; audit trail</td>
+                  <td>Every query must filter <code class="article-inline-code">deleted_at IS NULL</code>; tables grow
+                    without compaction</td>
+                </tr>
+                <tr>
+                  <td>Dual-layer permissions</td>
+                  <td>Defence-in-depth; RLS protects against app-layer bugs</td>
+                  <td>Permission logic is duplicated (app + database); can drift</td>
+                </tr>
+                <tr>
+                  <td>localStorage cache (5m TTL)</td>
+                  <td>Fast team switching; reduces server load for repeated views</td>
+                  <td>Stale data window; cache invalidation complexity</td>
+                </tr>
+                <tr>
+                  <td>3-point capacity enforcement</td>
+                  <td>Race-condition-proof; no possible path to exceed 10 members</td>
+                  <td>Triplicated logic (service + service + trigger)</td>
+                </tr>
+                <tr>
+                  <td>Server components for data</td>
+                  <td>Zero client-side data fetching boilerplate; automatic streaming</td>
+                  <td>Harder to do real-time updates; requires <code class="article-inline-code">router.refresh()</code>
+                    after mutations</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <h2 class="article-heading">What I'd Build Next</h2>
+          <p class="article-paragraph">A few directions worth exploring:</p>
+          <ul class="article-list">
+            <li class="article-list-item"><span class="article-bold">Real-time updates</span>: Supabase has Realtime
+              subscriptions. The dashboard could push new check-ins and announcements without requiring <code
+                class="article-inline-code">router.refresh()</code>.</li>
+            <li class="article-list-item"><span class="article-bold">Webhook notifications</span>: send Slack/Discord
+              webhooks when a new check-in or announcement is posted.</li>
+            <li class="article-list-item"><span class="article-bold">Check-in prompts</span>: automated email or in-app
+              reminders at configurable times.</li>
+            <li class="article-list-item"><span class="article-bold">Analytics</span>: per-user and per-team check-in
+              streaks, sentiment trends over time, participation rates.</li>
+            <li class="article-list-item"><span class="article-bold">Paid plans</span>: the database schema already has
+              <code class="article-inline-code">plan</code> (int) and <code
+                class="article-inline-code">max_members</code> fields. Pricing infrastructure is ready; just needs
+              Stripe.
+            </li>
+          </ul>
+          <h2 class="article-heading">Conclusion</h2>
+          <p class="article-paragraph">
+            Togetherish is a focused MVP codebase that demonstrates five production-grade patterns: a clean service
+            layer, defence-in-depth security, optimised dashboard loading, soft-delete discipline, and standardised
+            error handling.
+          </p>
+          <p class="article-paragraph">
+            The codebase is well-organised for its size: 23 API route files across 6 resource groups (auth, profile,
+            teams, dashboard, send, users), 7 service classes, 42 custom components across 6 feature directories (auth,
+            dashboard, landingpage, navigation, onboarding, profile), and 13 shadcn/ui primitives. </p>
+          <p class="article-paragraph">
+            The result is a codebase whose data flow can be traced from middleware through API route to service to
+            database, and back without crossing architectural boundaries in unexpected ways.
+          </p>
+          <p class="article-paragraph">
+            Try Togetherish, it's live at <a href="https://togetherish.io" target="_blank"
+              rel="noopener">togetherish.io</a>.
+          </p>
+          <div class="article-footer">
+            Built with Next.js, React, TypeScript, Supabase, Tailwind CSS, Shadcn/UI, Resend, Zod, and Framer
+            Motion.
+          </div>
+    </article>
   </main>
 </body>
 

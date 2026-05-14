@@ -380,7 +380,7 @@
     for (const s of stars) {
       ctx.font = `${s.sz}px ${FN}`;
       ctx.fillStyle = rgba(WHITE, s.a);
-      ctx.fillText('*', s.x, s.y);
+      ctx.fillText('.', s.x, s.y);
     }
 
     /* ── shooting stars ── */

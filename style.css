@@ -63,6 +63,13 @@ footer {
    ========================= */
 
 :root {
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
   --bg: #090909;
   --bg-subtle: #121212;
   --fg: #e8e8e8;
@@ -76,16 +83,6 @@ footer {
 /* =========================
    Base
    ========================= */
-
-:root {
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-text-size-adjust: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  scroll-behavior: smooth;
-}
 
 body {
   min-height: 100vh;
@@ -155,7 +152,7 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 6rem;
+  padding: 3rem 3rem;
 }
 
 nav {
@@ -245,7 +242,8 @@ nav {
 /* BLOG POST */
 
 .article-post-card {
-  max-width: 32rem;
+  max-width: 36rem;
+  width: 100%;
   display: flex;
   align-items: start;
   justify-content: start;
@@ -489,9 +487,5 @@ nav {
 
   .container {
     padding: 5rem 1rem;
-  }
-
-  .article-post-card {
-    padding: 2rem;
   }
 }
