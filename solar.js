@@ -16,7 +16,7 @@
   const FAINT = [25, 28, 35];
 
   const PLANET_COLORS = [
-    [255, 210, 80],    // sun
+    [255, 210, 80],   // sun
     [169, 169, 173],  // mercury
     [240, 225, 180],  // venus
     [70, 130, 220],   // earth
@@ -65,7 +65,7 @@
     ];
   }
 
-  const FOV = 3.2;
+  const FOV = 12.8;
   function proj(x, y, z) {
     const d = FOV / (FOV + z);
     return [x * d * sc + W * 0.5, y * d * sc + H * 0.5, z, d];
@@ -80,15 +80,15 @@
 
   /* ─── Planet Data ─── */
   const PLANETS = [
-    { name: 'sun',     orbit: 0.00, radius: 0.30, speed: 0,    tilt: 0,   colorIdx: 0, count: 500, rotSpeed: 0.4  },
-    { name: 'mercury', orbit: 0.30, radius: 0.05, speed: 2.5,  tilt: 7.0, colorIdx: 1, count: 100, rotSpeed: 2.0  },
-    { name: 'venus',   orbit: 0.65, radius: 0.09, speed: 1.8,  tilt: 3.4, colorIdx: 2, count: 200, rotSpeed: 1.2  },
-    { name: 'earth',   orbit: 1.00, radius: 0.10, speed: 1.3,  tilt: 0.0, colorIdx: 3, count: 200, rotSpeed: 3.0  },
-    { name: 'mars',    orbit: 1.25, radius: 0.07, speed: 0.9,  tilt: 1.9, colorIdx: 4, count: 200, rotSpeed: 2.5  },
-    { name: 'jupiter', orbit: 1.50, radius: 0.22, speed: 0.5,  tilt: 1.3, colorIdx: 5, count: 500, rotSpeed: 2.0  },
-    { name: 'saturn',  orbit: 1.75, radius: 0.18, speed: 0.3,  tilt: 2.5, colorIdx: 6, count: 400, rings: true, rotSpeed: 1.0  },
-    { name: 'uranus',  orbit: 2.00, radius: 0.13, speed: 0.18, tilt: 0.8, colorIdx: 7, count: 300, rotSpeed: 1.5  },
-    { name: 'neptune', orbit: 2.25, radius: 0.11, speed: 0.10, tilt: 1.8, colorIdx: 8, count: 200, rotSpeed: 2.8  },
+    { name: 'sun',     orbit: 0.00, radius: 0.30, speed: 0,    tilt: 0,   colorIdx: 0, count: 500, rotSpeed: 0.2  },
+    { name: 'mercury', orbit: 0.30, radius: 0.05, speed: 1.75,  tilt: 7.0, colorIdx: 1, count: 100, rotSpeed: 2.0  },
+    { name: 'venus',   orbit: 0.65, radius: 0.09, speed: 0.9,  tilt: 3.4, colorIdx: 2, count: 200, rotSpeed: 1.2  },
+    { name: 'earth',   orbit: 1.00, radius: 0.10, speed: 0.6,  tilt: 0.0, colorIdx: 3, count: 200, rotSpeed: 2.0  },
+    { name: 'mars',    orbit: 1.25, radius: 0.07, speed: 0.45,  tilt: 1.9, colorIdx: 4, count: 200, rotSpeed: 2.5  },
+    { name: 'jupiter', orbit: 1.50, radius: 0.22, speed: 0.25,  tilt: 1.3, colorIdx: 5, count: 500, rotSpeed: 2.0  },
+    { name: 'saturn',  orbit: 1.75, radius: 0.18, speed: 0.15,  tilt: 2.5, colorIdx: 6, count: 400, rings: true, rotSpeed: 1.0  },
+    { name: 'uranus',  orbit: 2.00, radius: 0.13, speed: 0.09, tilt: 0.8, colorIdx: 7, count: 300, rotSpeed: 1.5  },
+    { name: 'neptune', orbit: 2.25, radius: 0.11, speed: 0.05, tilt: 1.8, colorIdx: 8, count: 200, rotSpeed: 2.8  },
   ];
 
   const MOONS = [
