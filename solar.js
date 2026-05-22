@@ -31,8 +31,8 @@
   let W, H, sc;
 
   function resize() {
-    const d = devicePixelRatio || 1;
     W = innerWidth; H = innerHeight;
+    const d = Math.min(devicePixelRatio || 1, W < 768 ? 2 : 3);
     el.width = W * d; el.height = H * d;
     ctx.setTransform(d, 0, 0, d, 0, 0);
     ctx.textBaseline = 'middle';
@@ -182,13 +182,14 @@
   }
 
   function generateClouds() {
+    const scale = W < 768 ? 0.5 : 1;
     for (const p of PLANETS) {
-      const pts = spherePoints(p.radius, p.count);
-      const rings = p.rings ? ringPoints(p.radius * 1.5, p.radius * 3.0, 280) : null;
+      const pts = spherePoints(p.radius, Math.ceil(p.count * scale));
+      const rings = p.rings ? ringPoints(p.radius * 1.5, p.radius * 3.0, Math.ceil(280 * scale)) : null;
       allPoints.push({ pts, rings });
     }
     for (const m of MOONS) {
-      const pts = spherePoints(m.radius, m.count);
+      const pts = spherePoints(m.radius, Math.ceil(m.count * scale));
       allPoints.push({ pts });
     }
   }
@@ -250,6 +251,9 @@
 
   const FN = '"JetBrains Mono","SF Mono",ui-monospace,monospace';
 
+  /* ─── Frame timing ─── */
+  let lastTime = 0;
+
   /* ─── Mouse State ─── */
   let curX = -9999, curY = -9999, active = true;
   let smX = -9999, smY = -9999;
@@ -299,7 +303,8 @@
     }
 
     /* update orbital angles & rotation angles */
-    const dt = 0.008;
+    const dt = lastTime === 0 ? 0.008 : Math.min((time - lastTime) / 1000, 0.05) * 0.48;
+    lastTime = time;
     for (let i = 1; i < PLANETS.length; i++) {
       orbitAngles[i] += dt * PLANETS[i].speed;
     }
@@ -458,12 +463,13 @@
         if (alpha < 0.01) continue;
 
         const ddx = sx - smX, ddy = sy - smY;
-        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+        const dist2 = ddx * ddx + ddy * ddy;
         let drawX = sx, drawY = sy;
         let drawAlpha = alpha;
         let drawColor = color;
 
-        if (dist < cursorR) {
+        if (dist2 < cursorR * cursorR) {
+          const dist = Math.sqrt(dist2);
           const strength = 1 - dist / cursorR;
           const s2 = strength * strength;
           const push = s2 * cursorR * 0.35;
@@ -494,11 +500,12 @@
 
           const ringColor = [190, 175, 140];
           const ddx = sx - smX, ddy = sy - smY;
-          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+          const dist2 = ddx * ddx + ddy * ddy;
           let drawX = sx, drawY = sy;
           let drawAlpha = alpha;
 
-          if (dist < cursorR) {
+          if (dist2 < cursorR * cursorR) {
+            const dist = Math.sqrt(dist2);
             const strength = 1 - dist / cursorR;
             const push = strength * strength * cursorR * 0.35;
             const ang = Math.atan2(ddy, ddx);
@@ -533,12 +540,13 @@
         if (alpha < 0.01) continue;
 
         const ddx = sx - smX, ddy = sy - smY;
-        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+        const dist2 = ddx * ddx + ddy * ddy;
         let drawX = sx, drawY = sy;
         let drawAlpha = alpha;
         let drawColor = color;
 
-        if (dist < cursorR) {
+        if (dist2 < cursorR * cursorR) {
+          const dist = Math.sqrt(dist2);
           const strength = 1 - dist / cursorR;
           const s2 = strength * strength;
           const push = s2 * cursorR * 0.35;
@@ -559,14 +567,13 @@
     /* draw all particles */
     const isMobile = W < 768;
     for (const v of vis) {
-      const sz = Math.max(isMobile ? 11 : 9, Math.round((isMobile ? 18 : 14) * v.d));
-      ctx.font = `${sz}px ${FN}`;
+      const sz = Math.max(isMobile ? 1.5 : 1, (isMobile ? 2.5 : 2) * v.d);
       ctx.fillStyle = rgba(v.color, cap(v.alpha, 0, 0.95));
-      ctx.fillText('.', v.sx, v.sy);
+      ctx.fillRect(v.sx - sz * 0.5, v.sy - sz * 0.5, sz, sz);
     }
 
     /* ── sun glow ── */
-    {
+    if (!isMobile) {
       const [sx, sy] = proj(...rot(0, 0, 0, ry, rx));
       ctx.shadowBlur = 40;
       ctx.shadowColor = rgba(GOLD, 0.35);
