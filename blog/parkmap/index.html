@@ -53,15 +53,14 @@
 
       <h2 class="article-heading">What is it?</h2>
       <p class="article-paragraph">
-        parkmap.melbourne shows you where you can actually park in the Melbourne CBD, right now, based on live
+        parkmap.melbourne is a near-real-time map of on-street parking spaces in and around the Melbourne CBD. Based on live
         sensor data from thousands of in-ground parking bay sensors the City of Melbourne operates across the city.
         Click a bay and you get its status, its zone's restriction schedule, and a short list of better options
         nearby. Scrub backwards and you get seven days of history, played back like a recording. Look forward and
-        you get a probabilistic forecast. Which is pretty cool because it's an actual empirical estimate of how likely a given street is
-        to have a free bay at a given hour, built from the data the sensors have already produced.
+        you get a probabilistic forecast of today and the next day.
       </p>
       <p class="article-paragraph">
-        It is not a reservation system. It does not tell you that a bay is legally yours. It doesn't even tell you,
+        It's not a reservation system. It does not tell you that a bay is legally yours. It doesn't even tell you,
         with certainty, that a bay is free - it tells you what the most recent sensor reading says, how old that
         reading is, and lets you decide how much to trust it. That hedge is not a legal disclaimer bolted on
         afterward. It's the actual design principle the whole thing is built around, and it's there because the
@@ -128,6 +127,35 @@
         percentage of free bays, because a bare percentage implies a denominator you can trust. It says "based on X
         of Y bays" — always. Coverage is treated as a feature to disclose, not a caveat to bury in a footnote.
       </p>
+      <h3 class="article-subheading">bugs & findings: live</h3>
+      <ul class="article-list">
+        <li class="article-list-item"><code class="article-inline-code">status_description</code> reads as
+          unambiguous but isn't — the "obvious" query direction inverts free/occupied; caught by checking actual
+          values, not field names.</li>
+        <li class="article-list-item"><code class="article-inline-code">features[0]</code> sampled from the raw feed
+          looked stale — the export wasn't sorted, so the first record was arbitrarily old.</li>
+        <li class="article-list-item">Requesting more than 10,000 bays silently 400'd instead of paginating — an
+          undocumented API cap.</li>
+        <li class="article-list-item">A cron job reported success while writing to the wrong Supabase project
+          entirely.</li>
+        <li class="article-list-item">A schema-promised table turned out not to exist — caught only by checking
+          directly, not assuming the migration ran.</li>
+        <li class="article-list-item">The 3:15am restriction-refresh cron showed "success" in <code
+            class="article-inline-code">cron.job_run_details</code> for five-plus weeks while silently failing on a
+          401 from an unsubstituted <code class="article-inline-code">&lt;SERVICE_ROLE_KEY&gt;</code> placeholder —
+          the status table only meant "dispatched," and the 401s were only visible in a lower-level network log
+          table.</li>
+        <li class="article-list-item">Three <code class="article-inline-code">REVOKE EXECUTE ... FROM anon</code>
+          migrations all silently failed — <code class="article-inline-code">anon</code> inherits <code
+            class="article-inline-code">EXECUTE</code> through the auto-granted <code
+            class="article-inline-code">PUBLIC</code> role regardless of what's revoked from it by name, leaving an
+          unauthenticated <code class="article-inline-code">TRUNCATE</code>-capable endpoint exposed until a direct
+          verification query caught it.</li>
+        <li class="article-list-item">Root cause behind that: a database-level default-privilege rule silently
+          re-granting <code class="article-inline-code">anon</code>/<code
+            class="article-inline-code">authenticated</code> access to every new table, function, and sequence at
+          creation time.</li>
+      </ul>
 
       <h2 class="article-heading">The stack, and the one part I over-built</h2>
       <p class="article-paragraph">
@@ -245,6 +273,24 @@
         computation gets. The goal wasn't to make it fast again. It was to stop being in a fight it could lose a
         third time.
       </p>
+      <h3 class="article-subheading">bugs & findings: rewind</h3>
+      <ul class="article-list">
+        <li class="article-list-item">First version ran roughly 14 seconds — too slow to ship.</li>
+        <li class="article-list-item">Optimized to about 2 seconds, but only verified in Supabase's SQL editor,
+          which runs as the <code class="article-inline-code">postgres</code> superuser with no statement
+          timeout.</li>
+        <li class="article-list-item">Shipped anyway → immediately 502'd in production, because the real path goes
+          through PostgREST as <code class="article-inline-code">authenticator</code>, which carries an 8-second
+          statement timeout. "Works in the editor" proved nothing about production behavior.</li>
+        <li class="article-list-item">Re-fixed with a covering index and tighter memory scoping, landing at about
+          2.6 seconds — verified against the real API this time.</li>
+        <li class="article-list-item">Weeks later the sensor feed silently doubled overnight (3,388 → 6,324
+          records), and <code class="article-inline-code">rewind_window()</code> slowed back to 10–16.5 seconds —
+          over the timeout again.</li>
+        <li class="article-list-item">Fix: stopped tuning the query and moved the work off the request path — a
+          background cron recomputes the full seven-day payload every five minutes into a cache table via direct
+          SQL, bypassing PostgREST; the public function became a trivial cached-row lookup.</li>
+      </ul>
 
       <h2 class="article-heading">The night the data source doubled itself</h2>
       <p class="article-paragraph">
