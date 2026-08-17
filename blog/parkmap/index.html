@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>parkmap.melbourne - tjmb</title>
+  <meta name="description"
+    content="Building parkmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
+  <link rel="canonical" href="https://tjmb.dev/blog/parkmap" />
+  <link rel="icon" href="/public/favicon.ico" type="image/x-icon" />
+  <meta property="og:title" content="Building parkmap.melbourne" />
+  <meta property="og:description"
+    content="Building parkmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://tjmb.dev/blog/parkmap" />
+  <meta property="og:image" content="https://tjmb.dev/public/og.png" />
+  <meta property="og:site_name" content="tjmb" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Building parkmap.melbourne" />
+  <meta name="twitter:description"
+    content="Building parkmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
+  <meta name="twitter:image" content="https://tjmb.dev/public/og.png" />
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="2f1dca37-fc82-4066-8cc2-57d70ca3c457"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <nav>
+    <a href="/" class="brand">tjmb</a>
+    <div class="nav-links">
+      <a href="/blog/">blog</a>
+      <a href="/projects/">projects</a>
+    </div>
+  </nav>
+  <main class="container">
+    <article class="article-post-card">
+      <p class="article-eyebrow">technical deepdive</p>
+      <span class="article-date">August 17th, 2026</span>
+      <h1 class="article-title">Building parkmap.melbourne</h1>
+      <p class="article-intro">
+        City of Melbourne publishes vast amounts of data for urban analysis. One of those data sets holds info on the on-street parking bays scattered throughout the city. <br/><br/>
+        I thought it would be useful to build something for the public that takes that data and renders a live map with history and a forecast.<br/>
+        The idea I had in mind answered these questions: "Where can I park my car, and can I park here on x day at y time".
+        <br/><br/>
+        Parkmap.Melbourne - A near-real-time map of on-street parking in Melbourne's CBD.
+      </p>
+
+      <h2 class="article-heading">What is it?</h2>
+      <p class="article-paragraph">
+        parkmap.melbourne shows you where you can actually park in the Melbourne CBD, right now, based on live
+        sensor data from thousands of in-ground parking bay sensors the City of Melbourne operates across the city.
+        Click a bay and you get its status, its zone's restriction schedule, and a short list of better options
+        nearby. Scrub backwards and you get seven days of history, played back like a recording. Look forward and
+        you get a probabilistic forecast. Which is pretty cool because it's an actual empirical estimate of how likely a given street is
+        to have a free bay at a given hour, built from the data the sensors have already produced.
+      </p>
+      <p class="article-paragraph">
+        It is not a reservation system. It does not tell you that a bay is legally yours. It doesn't even tell you,
+        with certainty, that a bay is free - it tells you what the most recent sensor reading says, how old that
+        reading is, and lets you decide how much to trust it. That hedge is not a legal disclaimer bolted on
+        afterward. It's the actual design principle the whole thing is built around, and it's there because the
+        alternative — a map that looks confident and is sometimes simply wrong — is worse than useless. A parking
+        app that occasionally sends you to a space that was never there doesn't get a second chance from its users.
+      </p>
+      <p class="article-paragraph">
+        It's also, deliberately, not a startup. No auth, no billing, no accounts. It's a portfolio piece: something
+        built to be legible to another engineer in about five minutes, and to demonstrate that I
+        can take a messy, half-documented data feed and turn it into something that's honest about its
+        own limitations.
+      </p>
+      <p class="article-paragraph">
+        That honesty turned out to be the hardest part of the project, and not for the reason I expected. I assumed
+        the challenge would be the map — the tiles, the dots, the interactions. The challenge was that almost
+        everything upstream of the map was, at some point, quietly wrong, and it never announced itself as wrong, it
+        looked fine.
+      </p>
+
+      <h2 class="article-heading">Day one: Data & the API</h2>
+      <p class="article-paragraph">
+        The City of Melbourne publishes its parking sensor data as an open feed; GeoJSON, updated continuously,
+        free to use under a CC BY 4.0 licence. Reading the field names, one looked completely unambiguous, <code
+          class="article-inline-code">status_description</code>, with two possible values, <code
+          class="article-inline-code">"Present"</code> and <code class="article-inline-code">"Unoccupied"</code>.
+        You'd reasonably assume <code class="article-inline-code">"Present"</code> means a car is present, i.e. the
+        bay is occupied. You'd also reasonably assume the opposite framing — that the field is answering "is a car
+        present in this reading," full stop, which is exactly what it does. The gotcha wasn't that the field lied;
+        it's that reading it quickly and confidently, the way you read a field you're sure you understand, gets you
+        the wrong answer. <code class="article-inline-code">is_free</code> is <code
+          class="article-inline-code">status_description == "Unoccupied"</code>, and if you build the query the
+        "obvious" way, you get a map showing occupied bays as free and empty bays as taken — the single worst
+        possible bug for a parking map to ship.
+      </p>
+      <p class="article-paragraph">
+        That bug never made it to production, because of something I did almost as a reflex from the very first
+        week: never trust an HTTP 200. Check the actual values. The early build log for this project — kept as its
+        own document, <code class="article-inline-code">project-record.md</code>, essentially a running list of
+        "things that looked fine and weren't" — reads like a small museum of this exact failure mode. An export
+        sampled from <code class="article-inline-code">features[0]</code> looked stale because the export wasn't
+        sorted and the first feature just happened to be an old one. A request for more than 10,000 bays quietly
+        400'd instead of paginating, because the endpoint had an undocumented cap. A cron job reported success in
+        its own status table while actually hitting the wrong Supabase project entirely. A key got pasted into a
+        chat log and had to be rotated. A table that should have existed, according to the schema, turned out to be
+        a phantom — caught only because I asked a tool to check, rather than assuming the migration had run.
+      </p>
+      <p class="article-paragraph">
+        None of these were exotic bugs. They were all the same bug, wearing different clothes: something reported
+        success, and the actual state underneath was different. By the end of that first week the project had
+        accumulated an operating principle, stated flatly in that early document and never really revised since:
+      </p>
+      <blockquote class="article-quote">
+        Verify, don't trust. Every data bug this project hit looked fine at HTTP/200 and was wrong underneath.
+      </blockquote>
+      <p class="article-paragraph">
+        I did not know, writing that sentence early on, how many times it would come back to be the actual moral of
+        a story months later — including two incidents, described below, that would have been genuinely serious if
+        that instinct hadn't been load-bearing by then.
+      </p>
+      <p class="article-paragraph">
+        The other founding fact from that first week: roughly half the sensor network was silently dead. Not slowly
+        degrading — bimodal. A sensor either reported fresh data or it hadn't spoken in weeks, with almost nothing
+        in between. That fact became a permanent constraint on the whole UI. The map doesn't report a bare
+        percentage of free bays, because a bare percentage implies a denominator you can trust. It says "based on X
+        of Y bays" — always. Coverage is treated as a feature to disclose, not a caveat to bury in a footnote.
+      </p>
+
+      <h2 class="article-heading">The stack, and the one part I over-built</h2>
+      <p class="article-paragraph">
+        The technical shape of the project is fairly conventional: Next.js on Vercel for the frontend, Supabase
+        (Postgres + PostGIS) for the database, Deno Edge Functions on <code
+          class="article-inline-code">pg_cron</code> for ingestion, MapLibre GL for rendering. None of that is
+        where the story is. The interesting reversal is the basemap.
+      </p>
+      <p class="article-paragraph">
+        Rendering a detailed vector map of a city center means either paying a per-request tile provider or hosting
+        your own tiles. My first plan was the "proper" version of self-hosting: use Protomaps' open tile format, but
+        put the tile archive in a Cloudflare R2 bucket, with its own CORS configuration and its own account to
+        manage. It's the textbook scalable answer. It's also the wrong answer at this scale. The actual tile extract
+        for the Melbourne CBD, cut down to just the area the app needs, is 7.2MB. That fits inside a Next.js app's
+        <code class="article-inline-code">public/</code> folder as an ordinary static file, served by Vercel exactly
+        like any other asset, with zero extra infrastructure, zero extra accounts, and zero additional failure
+        modes. The R2 plan was dropped once that became obvious — a small, satisfying instance of building the
+        sophisticated version first and then realising the simple version was correct.
+      </p>
+
+      <h2 class="article-heading">Making the map look honest</h2>
+      <p class="article-paragraph">
+        The visual design of the map went through more failed attempts than I expected, and the failures are
+        instructive because they weren't really about taste — they were about the same "looked fine in isolation,
+        wrong in context" pattern showing up in pixels instead of data.
+      </p>
+      <p class="article-paragraph">
+        The map uses a dark basemap by default, which is a slightly risky choice — a lot of design guidance treats
+        saturated accents on a dark background as an anti-pattern, "neon on black." The first attempt at the palette
+        picked colors that, compared swatch-to-swatch, looked like a reasonable dark theme. Rendered as an actual
+        map, it read as solid black. The problem was the contrast ratio between adjacent elements — buildings
+        against background measured at roughly ΔE 9, well under the threshold where a human eye reliably
+        distinguishes them. The fix then overcorrected in the opposite direction: roads were brightened on the
+        theory that thin lines need more contrast to read at all, which is true in isolation and disastrously wrong
+        at city scale, because a dense street grid multiplies that brightness across thousands of line segments. The
+        result was a glaring white wireframe that outcompeted the one thing on the map that actually mattered — the
+        colored dots showing bay availability. The eventual fix pushed contrast for buildings up to ΔE ~23 while
+        deliberately keeping roads restrained, and assigned parks, water, and motorways hues (olive, teal, sand)
+        chosen specifically to never compete with the dot palette. None of this is subtle once you see it wrong in a
+        screenshot. All of it was invisible comparing colors two at a time in a palette editor.
+      </p>
+      <p class="article-paragraph">
+        The same instinct shows up as an explicit rule elsewhere in the design: there is no heatmap, and there will
+        not be one. A heatmap is tempting — it's a natural way to visualize "this area tends to be busy" — but
+        building one means interpolating between known data points across unmeasured space, and that interpolation
+        is, quietly, a claim. It asserts knowledge the sensors don't actually have. Given that the entire premise of
+        the project is not overstating what the data supports, a heatmap was rejected on principle rather than
+        difficulty. It would have been easy to build. It would also have been a lie shaped like a nice gradient.
+      </p>
+
+      <h2 class="article-heading">Building a forecast.</h2>
+      <p class="article-paragraph">
+        Once enough history had accumulated, the natural next step was a forecast layer — an "arrive at 5pm, how
+        likely is a bay nearby" view. The build order here is worth mentioning because the naive version is the one
+        that fails first: an early implementation tried to answer this with a probe-grid approach, effectively
+        cross-joining candidate time probes against every historical interval. It's conceptually simple and it's
+        O(probes × intervals), which is fine until the tables grow, at which point it just times out. The
+        replacement — duration-weighted interval-splitting, computing P(free) directly from how long each bay
+        actually spent in each state — was strictly better on every axis: faster, simpler to reason about, and
+        cheaper to run. It's one of the rare cases in this project where "simpler" wasn't a trade-off against
+        something else; it was just the result of having tried the complicated thing first and learned what it
+        actually needed to do.
+      </p>
+      <p class="article-paragraph">
+        The forecast layer also inherited a subtler bug from the dead-sensor problem described earlier. Sensors that
+        had gone silent months ago still had one row in the historical table — their last known reading, frozen at
+        whatever timestamp they died. Left unwindowed, that frozen reading would get treated as a real 24-hour
+        interval and folded into the same hour-of-week statistical bucket, over and over, for every dead sensor on a
+        dead street. A live audit of the forecast grid found that 102 of 239 segments were being labeled "reliable"
+        purely on the strength of this fiction — confident-looking cells built entirely out of sensors that hadn't
+        spoken in a year. The fix was to window the lookback (eventually settling on 30 days, matched to the
+        database's own retention policy), so a dead sensor's ghost can no longer masquerade as ongoing data. The
+        forecast is explicitly labeled a forecast and the live map is explicitly not — a "live difficulty" reading
+        is a snapshot of right now, never dressed up as a prediction, because those are different epistemic claims
+        and blurring them would be exactly the kind of overstatement the rest of the project works hard to avoid.
+      </p>
+
+      <h2 class="article-heading">Rewind mode, and a two-act lesson about where code actually runs</h2>
+      <p class="article-paragraph">
+        Rewind mode plays back the last seven days of bay activity like a video — drag a scrubber, watch dots flip
+        between free and occupied across the CBD. Under the hood it's a single database function, <code
+          class="article-inline-code">rewind_window()</code>, that assembles a full week of state transitions into
+        one JSON payload the frontend can step through client-side.
+      </p>
+      <p class="article-paragraph">
+        The first version of that function ran in roughly 14 seconds — fine to build against, obviously too slow to
+        ship. After optimization work (better indexing, tuned memory settings), it ran in about 2 seconds, verified
+        directly in Supabase's SQL editor. Shipped it. It immediately started 502ing in production.
+      </p>
+      <p class="article-paragraph">
+        The gap turned out to be environmental, not computational. The SQL editor runs queries as the <code
+          class="article-inline-code">postgres</code> superuser, with no statement timeout at all. The actual
+        production path goes through PostgREST, connecting as a role called <code
+          class="article-inline-code">authenticator</code>, which carries an 8-second statement timeout by policy. A
+        query that comfortably finishes in the editor can still get killed mid-flight through the real API, and the
+        failure surfaces as a generic 502 with no obvious connection to "query too slow" unless you know to look for
+        it. "Works in the SQL editor" turned out to prove nothing at all about production behavior — a distinction
+        that's obvious in hindsight and easy to miss the first time, because both paths run the literal same SQL
+        against the literal same database.
+      </p>
+      <p class="article-paragraph">
+        That got fixed with a covering index and tighter memory scoping, landing consistently around 2.6 seconds
+        through the real API this time, actually verified against the real API. Case closed, or so it seemed for a
+        few weeks.
+      </p>
+      <p class="article-paragraph">
+        Then the sensor feed doubled — more on that in a moment — and <code
+          class="article-inline-code">rewind_window()</code> slowed back down to 10 to 16.5 seconds, comfortably
+        over the timeout again. This time the fix wasn't another round of query tuning, because query tuning is a
+        linear response to a problem that had already proven it could jump nonlinearly overnight, with no warning,
+        at the whim of an external data provider. The actual fix moved the expensive work off the request path
+        entirely: a background cron job now recomputes the full seven-day payload every five minutes and stores it
+        in a small cache table, direct SQL, no PostgREST hop, no timeout to race against. The public-facing function
+        collapsed down to a single cached row lookup — trivially fast regardless of how large the underlying
+        computation gets. The goal wasn't to make it fast again. It was to stop being in a fight it could lose a
+        third time.
+      </p>
+
+      <h2 class="article-heading">The night the data source doubled itself</h2>
+      <p class="article-paragraph">
+        That sensor-feed jump deserves its own telling. With no announcement, the City of Melbourne's public feed
+        grew from 3,388 sensor records to 6,324 — an 87% increase, overnight, with nothing in any changelog to
+        explain it.
+      </p>
+      <p class="article-paragraph">
+        The instinct here mattered more than any specific code change. The response wasn't to assume the new data
+        was fine because the pipeline kept running without visibly erroring — that's exactly the kind of "looks
+        fine, might not be" situation the whole project exists to be suspicious of. Before trusting the expanded
+        feed, I checked it for the signature of a bulk synthetic load: a suspicious cluster of near-identical
+        timestamps that would suggest placeholder rows rather than real hardware. There wasn't one. The new sensors'
+        status timestamps were spread naturally across years, back to 2022, consistent with a set of
+        already-existing sensors simply being newly exposed through the public API rather than freshly installed.
+      </p>
+      <p class="article-paragraph">
+        Once that was confirmed, the ingestion pipeline absorbed the expansion with zero code or schema changes,
+        because nothing in it had ever been written to assume a fixed bay count — it just upserts whatever the feed
+        hands it. The only real fallout was cosmetic: hardcoded copy on the About page citing "~3,388 sensors" and
+        "half the network is dead" both needed a manual sweep, settling on "a third" for the dead-sensor fraction,
+        since coverage had actually improved in relative terms even as the raw dead count grew. The one place the
+        doubling did cause a real structural problem was downstream, in rewind mode — the second act of the story
+        above.
+      </p>
+
+      <h2 class="article-heading">Two incidents where "it says it succeeded" was the whole bug</h2>
+      <p class="article-paragraph">
+        Two separate incidents, months apart, both boil down to the exact failure mode the project's founding
+        principle was written to guard against: something reported success, and it wasn't true.
+      </p>
+      <p class="article-paragraph">
+        The first was a cron job. Every night at 3:15am, a scheduled job was supposed to refresh the zone-level
+        parking restriction data — which streets are 1P, 2P, loading zones, and so on. <code
+          class="article-inline-code">cron.job_run_details</code>, Supabase's own status table for scheduled jobs,
+        showed that job succeeding, every single night, for over five weeks. It hadn't actually run correctly once
+        in that window. Buried in the job's stored command was a literal, unsubstituted placeholder string, <code
+          class="article-inline-code">&lt;SERVICE_ROLE_KEY&gt;</code>, sitting where a real authentication key
+        should have been, almost certainly dropped during an earlier key migration. Every nightly attempt was
+        authenticating with that placeholder, getting rejected with a 401, and never writing a single row. <code
+          class="article-inline-code">cron.job_run_details</code> doesn't actually mean "the job's logic completed
+        successfully" — it means "the job was dispatched." Those are different claims, and the table's own name
+        invites you to conflate them. The real signal was in a lower-level network log table, which showed the 401s
+        the whole time, for anyone who thought to check it instead of trusting the friendlier-looking status table.
+        Restriction hints across the entire CBD had been frozen at five-week-old values the whole time, silently,
+        with every system-level indicator saying everything was fine.
+      </p>
+      <p class="article-paragraph">
+        The second was more serious. A string of database migrations, written over the course of several weeks,
+        each aimed to lock down which functions the public — unauthenticated — role could execute, particularly a
+        couple of ingestion functions that started with an unconditional <code
+          class="article-inline-code">TRUNCATE</code> on their target table. Each migration ran a <code
+          class="article-inline-code">REVOKE EXECUTE ... FROM anon</code>, and each one, checked naively, looked
+        like it had worked. A direct verification query later proved that anonymous access to every one of those
+        functions was still <code class="article-inline-code">true</code>, despite three separate migrations each
+        believing they'd closed it. The root cause was a genuinely easy trap: Postgres automatically grants <code
+          class="article-inline-code">EXECUTE</code> to a built-in role called <code
+          class="article-inline-code">PUBLIC</code> the moment any function is created, and every other role —
+        including <code class="article-inline-code">anon</code> — implicitly inherits whatever <code
+          class="article-inline-code">PUBLIC</code> can do, regardless of what's revoked from that role by name.
+        Revoking <code class="article-inline-code">anon</code>'s own named grant did nothing, because <code
+          class="article-inline-code">anon</code> was never using its own grant; it was riding <code
+          class="article-inline-code">PUBLIC</code>'s. Until that was understood and an explicit <code
+          class="article-inline-code">REVOKE ... FROM PUBLIC</code> was added, the practical state of the database
+        was that a single unauthenticated POST request with an empty JSON payload could have permanently wiped a
+        production table. Tracing it further back turned up the actual root cause: a database-level
+        default-privilege rule that had been silently re-granting <code class="article-inline-code">anon</code> and
+        <code class="article-inline-code">authenticated</code> access to every newly created table, sequence, and
+        function, automatically, at creation time — meaning the same class of bug would have kept quietly
+        reappearing on every future migration until that default was fixed too, not just the symptom fixed once.
+      </p>
+      <p class="article-paragraph">
+        Neither incident was caught by anything announcing itself. Both were caught by refusing to accept a green
+        status as proof, and running a direct query to check what was actually true underneath.
+      </p>
+
+      <h2 class="article-heading">A bug that wasn't a bug</h2>
+      <p class="article-paragraph">
+        Not everything was a security incident. Some of it was just funny in retrospect. The theme toggle uses a
+        single icon that's supposed to represent both light and dark mode — a yin-yang symbol felt like an elegant
+        single-glyph solution, since the symbol already encodes exactly the duality the button represents. A user
+        reported it was invisible in dark mode. The obvious hypothesis is a CSS bug: wrong color, wrong contrast, an
+        inherited style stomping on it. None of that was true. The Unicode yin-yang character, on that particular
+        platform, was being rendered as a fixed-color emoji bitmap by the system font — a tiny raster image, baked
+        at build time by whoever drew that emoji, completely outside the reach of <code
+          class="article-inline-code">currentColor</code>, theme variables, or any CSS rule whatsoever. It wasn't
+        ignoring the styling; it was never a text glyph subject to styling in the first place. It took a screenshot,
+        not a computed-style inspection, to actually see what was happening — the DOM and the CSSOM both looked
+        completely correct. The fix was to stop asking a font to draw the icon and just draw it directly, as a small
+        hand-built inline SVG, the same way every other icon in the app already worked. A five-minute fix, once the
+        actual cause was visible instead of assumed.
+      </p>
+
+      <h2 class="article-heading">Where it stands, and what's still open</h2>
+      <p class="article-paragraph">
+        The map is live in production today, deployed on Vercel, running against the real City of Melbourne feed on
+        a two-minute ingestion cycle. It has three modes — live, forecast, and a full week of scrubbable history —
+        a colour-blind-safe palette option, geolocation-aware search radius, and marker clustering that specifically
+        clusters only the free bays, because a cluster count of unavailable spaces isn't information a driver needs
+        and would visually crowd out the ones that are.
+      </p>
+      <p class="article-paragraph">
+        Some things are still genuinely open, and staying honest about the project means saying so rather than
+        presenting a finished-looking snapshot. The custom domain isn't attached to the deployment yet, even though
+        the app's own metadata and sitemap already reference it — a small mismatch waiting on a DNS step. A
+        structural fix for the rewind-performance saga, specifically designed to survive another 2-3x jump in
+        sensor count without regressing into the same 502 a third time, is written and reviewed but not yet applied
+        to the live database, because this project runs under a strict rule that the database itself is read-only
+        from an assistant's hands — every schema change gets written as a migration file for a human to actually
+        run. A handful of lower-priority hardening items — an unapplied index cleanup, some remaining function
+        grants on read-only endpoints, error monitoring that doesn't exist yet — sit in a roadmap file, openly
+        labeled as not done.
+      </p>
+      <p class="article-paragraph">
+        That's a deliberate choice, and it's the same one running through everything above. The most recent entries
+        in this project's own internal changelog, at the time of writing, are the cache precompute that fixed
+        rewind's second timeout and the free-bay-only clustering feature — both still framed the same way
+        everything before them was: here's what changed, here's why, here's how it was actually verified rather
+        than assumed. Verify, don't trust turned out not to be a slogan from week one that got outgrown. It's just
+        how the project still gets built, months later, one green status at a time refused to be taken at face
+        value.
+      </p>
+
+      <div class="article-footer">
+        Built with Next.js, Supabase (Postgres + PostGIS), Deno Edge Functions, pg_cron, MapLibre GL, and
+        Protomaps.
+      </div>
+    </article>
+  </main>
+</body>
+
+</html>

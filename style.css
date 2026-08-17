@@ -480,6 +480,19 @@ nav {
   text-transform: lowercase;
 }
 
+/* blockquote / pull-quote */
+.article-quote {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--fg);
+  letter-spacing: 0.05em;
+  line-height: 1.8;
+  border-left: 2px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0.5em 0 2em;
+}
+
 @media (max-width: 600px) {
   nav {
     padding: 2rem 1rem;
