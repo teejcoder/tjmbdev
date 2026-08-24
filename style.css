@@ -502,3 +502,8 @@ nav {
     padding: 5rem 1rem;
   }
 }
+
+::selection{
+  color:#ff9a3d;
+  background-color:#090909;
+}
