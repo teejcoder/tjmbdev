@@ -4,22 +4,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>parkmap.melbourne - tjmb</title>
+  <title>parkingmap.melbourne - tjmb</title>
   <meta name="description"
-    content="Building parkmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
-  <link rel="canonical" href="https://tjmb.dev/blog/parkmap" />
+    content="Building parkingmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
+  <link rel="canonical" href="https://tjmb.dev/blog/parkingmap" />
   <link rel="icon" href="/public/favicon.ico" type="image/x-icon" />
-  <meta property="og:title" content="Building parkmap.melbourne" />
+  <meta property="og:title" content="Building parkingmap.melbourne" />
   <meta property="og:description"
-    content="Building parkmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
+    content="Building parkingmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="https://tjmb.dev/blog/parkmap" />
+  <meta property="og:url" content="https://tjmb.dev/blog/parkingmap" />
   <meta property="og:image" content="https://tjmb.dev/public/og.png" />
   <meta property="og:site_name" content="tjmb" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Building parkmap.melbourne" />
+  <meta name="twitter:title" content="Building parkingmap.melbourne" />
   <meta name="twitter:description"
-    content="Building parkmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
+    content="Building parkingmap.melbourne: a near-real-time map of on-street parking in Melbourne's CBD." />
   <meta name="twitter:image" content="https://tjmb.dev/public/og.png" />
   <script defer src="https://cloud.umami.is/script.js" data-website-id="2f1dca37-fc82-4066-8cc2-57d70ca3c457"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -42,18 +42,18 @@
     <article class="article-post-card">
       <p class="article-eyebrow">technical deepdive</p>
       <span class="article-date">August 17th, 2026</span>
-      <h1 class="article-title">Building parkmap.melbourne</h1>
+      <h1 class="article-title">Building parkingmap.melbourne</h1>
       <p class="article-intro">
         City of Melbourne publishes vast amounts of data for analysis and development. One of those datasets exposes the on-street parking bays scattered throughout the city. <br/><br/>
         I thought it would be useful to build something for the public that takes that data and renders a live map with a history and forecast.<br/>
         The map answers these questions: "What street has open bays, how hard is it to park there, where can I park on x day at y time".
         <br/><br/>
-        A technical deepdive of <a href="https://parkmap.melbourne" target="_blank" style="color: var(--accent);">parkmap.melbourne</a> - A near-real-time map of on-street parking.
+        A technical deepdive of <a href="https://parkingmap.melbourne" target="_blank" style="color: var(--accent);">parkingmap.melbourne</a> - A near-real-time map of on-street parking.
       </p>
 
       <h2 class="article-heading">What it is</h2>
       <p class="article-paragraph">
-        parkmap.melbourne is a map exposing parking bays across Melbourne from thousands of in-ground parking bay sensors across the city.
+        parkingmap.melbourne is a map exposing parking bays across Melbourne from thousands of in-ground parking bay sensors across the city.
         Click a bay and you get its status, its zone's restriction schedule, and a short list of better options
         nearby. Scrub backwards and you get seven days of history, played back like a recording. Look forward and
         you get a probabilistic forecast of how likely a given street is
@@ -95,24 +95,25 @@
         that report whether a bay is occupied identify each bay one way (a <code
           class="article-inline-code">kerbsideid</code>); the separate feed listing what each bay's actual signage
         restricts — 1P, 2P, loading zone, permit — identifies bays a different way (<code
-          class="article-inline-code">bayid</code>). The City of Melbourne never publishes a link between the two
+          class="article-inline-code">bayid</code>). The CoM never published a link between the two
         IDs. There is no way, from the data that exists, to say "this exact bay is 2P until 6pm" — any app that
         displays that would be guessing and presenting the guess as fact. What the data <em>does</em> support is
-        coarser but real: bays carry a zone number, and zones link reliably (for roughly 90% of them) to the actual
+        coarser: bays carry a zone number, and zones link reliably (kind of) to the actual
         signage rules for that area. So the map shows a zone-level hint instead of a bay-specific claim — "this area
         commonly shows 2P, check the sign" — which is less satisfying than a precise answer but is the one the data
         can actually back up.
       </p>
       <p class="article-paragraph">
-        The other founding fact from that first week: roughly half the sensor network was silently dead. Not slowly
-        degrading, but bimodal. A sensor either reported fresh data or it hadn't spoken in weeks, with almost nothing
+        The other founding fact from that first week: roughly half the sensor network was silently dead. Not degraded, but completely bimodal. A sensor either reported fresh data or it hadn't spoken in weeks, with almost nothing
         in between. That fact became a permanent constraint on the whole UI. The map doesn't report a bare
-        percentage of free bays, because a bare percentage implies a denominator you can trust. It says "based on X
-        of Y bays" — always. Coverage is treated as a feature to disclose, not a caveat to bury in a footnote.
+        percentage of free bays, because a bare percentage implies a number you can trust. Instead, it says "based on X
+        of Y bays". Coverage is treated as a feature to disclose, rather than a caveat to bury in a footnote.
       </p>
 
       <p class="article-quote">
-        Here's Lonsdale Street in the map and IRL taken at the same time. <br/> Each grey dot around the location pin means the sensors haven't picked up a car coming or going within the last 24 hours - the actual data says the last signal was on 02/06/2025. <br/> IRL, there are cars there now, it changes everything..<br/>
+        Here's Lonsdale Street in the map, and a photo taken of the same spot at the same time. <br/> 
+        Each greyed-out dot around the location pin means the sensors haven't picked up a car coming or going within the last 24 hours - the actual data says the last signal was on 02/06/2025. <br/>
+        The reality contradicts the data.
       </p>
 
       <div>
@@ -135,16 +136,16 @@
         manage. It's the textbook scalable answer. It's also the wrong answer at this scale. The actual tile extract
         for the Melbourne CBD, cut down to just the area the app needs, is 7.2MB. That fits inside a Next.js app's
         <code class="article-inline-code">public/</code> folder as an ordinary static file, served by Vercel exactly
-        like any other asset, with zero extra infrastructure, zero extra accounts, and zero additional failure
-        modes. The R2 plan was dropped once that became obvious — a small, satisfying instance of building the
-        sophisticated version first and then realising the simple version was correct.
+        like any other asset, with zero extra infrastructure, user accounts, and additional failure
+        modes. The R2 plan was dropped, a small, satisfying instance of building the
+        sophisticated version first and then realising the simple version was better.
       </p>
 
-      <h2 class="article-heading">How fast is "live," actually</h2>
+      <h2 class="article-heading">How fast is "live" actually</h2>
       <p class="article-paragraph">
-        "Live" is a word that invites a specific assumption — that the dot on the map flips the instant a car pulls
-        out. It doesn't, and the honest number is worth stating plainly: worst case, the map can run a bit over two
-        minutes behind reality. That's not a corner cut carelessly; it's a floor set upstream, by the data source
+        "Live" is a word that invites an assumption — that the dot on the map flips the instant a car pulls
+        out. It doesn't. Worst case, the map can run a bit over two
+        minutes behind reality. That's not corner-cutting, it's a floor set upstream by the data source
         itself, and the interesting part is how that got confirmed.
       </p>
       <p class="article-paragraph">
@@ -153,29 +154,27 @@
         stacked on top of each other: 
       </p>
         <ol class="article-list">
-          <li class="article-list-item">How often the City of Melbourne's own feed republishes.</li>
+          <li class="article-list-item">How often the CoM's own feed re-publishes.</li>
           <li class="article-list-item">How often this app's own background job checks that feed.</li>
           <li class="article-list-item">How long the app briefly caches a response before checking again.</li>
         </ol> 
         <p class="article-paragraph">
         The first of those was checked directly by polling the raw government feed every 20
         seconds and watching a timestamp shared across thousands of sensors hold perfectly still, then jump by
-        exactly two minutes, on schedule. That's a clean, confirmed floor: the source itself only republishes every
-        two minutes, full stop.
+        exactly two minutes on schedule. A nice, clean confirmed floor. The source itself only republishes every
+        two minutes.
       </p>
       <p class="article-paragraph">
-        Two of the three delays were pure overhead — waiting stacked on top of the real floor for no benefit — and
-        got tightened down. The two-minute government-side floor is the one thing that can't be improved from this
-        side at all, and deliberately wasn't touched: polling the source feed faster wouldn't produce fresher data,
-        since the feed isn't updating any faster than every two minutes no matter how often it's asked. It would
+        Two of the three delays were pure overhead. The two-minute government-side floor is the thing that can't be improved from this
+        side at all, so, deliberately wasn't touched. Polling the source feed faster wouldn't produce fresher data. It would
         just mean roughly four times the requests and four times the stored history, for a number on screen that
         would look exactly the same. Confirming that before "fixing" it saved a chunk of infrastructure.
       </p>
 
       <h2 class="article-heading">Making the map look honest</h2>
       <p class="article-paragraph">
-        The visual design of the map went through more failed attempts than I expected, and the failures weren't really about taste, they were about the same "looked fine in isolation but
-        wrong in context" pattern showing up in pixels.
+        The visual design of the map went through more failed attempts than I expected. The failures weren't really about taste, they were about the same <i>looked fine in isolation but
+        wrong in context</i> pattern showing up in pixels.
       </p>
 
       <p class="article-eyebrow">Here's an early design draft</p>
@@ -186,17 +185,6 @@
         <img src="../../public/parkmap/specimen-dark.webp" alt="" aria-label=""/>
       </div>
 
-      <p class="article-paragraph">
-        The map uses a dark basemap by default — a risky choice, since saturated accents on dark backgrounds are a
-        known anti-pattern ("neon on black"). The first palette looked fine swatch-to-swatch but rendered as solid
-        black on the actual map: buildings sat at roughly ΔE 9 against the background, well under what a human eye
-        reliably distinguishes. Overcorrecting, brightened roads then multiplied across thousands of line segments
-        into a glaring white wireframe that outcompeted the dots it was supposed to support. The fix pushed building
-        contrast to ΔE ~23 while keeping roads restrained, and gave parks, water, and motorways their own muted hues
-        (olive, teal, sand) so nothing competed with the dot palette. Obvious once wrong in a screenshot; invisible
-        comparing colors two at a time in a palette editor.
-      </p>
-      </p>
       <p class="article-paragraph">
         The dot colours have to work as a claim: free is the only fully saturated color (the one thing worth
         acting on), occupied is dimmer, stale is faded almost to nothing. Color is never the only signal — brightness
@@ -219,7 +207,7 @@
       </p>
       <p class="article-paragraph">
         <strong class="article-heading">Rewind</strong> plays back the last seven days of observed activity like a recording — drag a
-        scrubber and watch actual history replay across the whole CBD. It deliberately uses the exact same colors as
+        scrubber and watch actual history replay across the whole CBD. It uses the same color-palette as
         the live view rather than the forecast's gradient, because it's showing things that genuinely happened.
       </p>
       <p class="article-paragraph">
@@ -230,25 +218,23 @@
         trust, the map says so outright in grey rather than rendering a confident-looking guess.
       </p>
 
-      <h2 class="article-heading">Building a forecast without pretending it's a prediction</h2>
+      <h2 class="article-heading">Building a forecast without pretending a guarantee</h2>
       <p class="article-paragraph">
-        Once enough history had accumulated, the natural next step was a forecast layer — an "arrive at 5pm, how
-        likely is a bay nearby" view. The build order here is worth mentioning: an early implementation tried to answer this with a probe-grid approach, effectively
-        cross-joining candidate time probes against every historical interval. It's conceptually simple and it's
-        O(probes × intervals), which is fine until the tables grow, at which point it just times out. The
-        replacement — duration-weighted interval-splitting, computing P(free) directly from how long each bay
-        actually spent in each state — was strictly better on every axis: faster, simpler to reason about, and
-        cheaper to run.
+        Once enough history had built up — around six weeks — the natural next step was to add forecasting. 
+        I wanted to answer a simple question: <i>“I’m arriving at 2pm. Can I expect to find a park on this street, and how difficult is it likely to be?”</i>
+        The first version was fairly straightforward, but it became too slow as the amount of historical data grew. 
+        Rather than checking every possible time against all of that history, I changed the approach to look at how long each parking bay typically spent as free or occupied. 
+        This turned out to be both much faster and simpler to run, while also giving me a better foundation for the forecasting layer.
       </p>
       <p class="article-paragraph">
-        The forecast layer also inherited a subtler bug from the dead-sensor problem described earlier. Sensors that
-        had gone silent months ago still had one row in the historical table — their last known reading, frozen at
-        whatever timestamp they died. Left unwindowed, that frozen reading got treated as a real 24-hour
-        interval and folded into the same hour-of-week statistical bucket, over and over, for each dead sensor on a
-        dead street. A live audit of the forecast grid found that 102 of 239 segments were being labeled "reliable"
-        — confident-looking cells were built entirely out of sensors that hadn't spoken in a year. The fix was to window the lookback, 
-        eventually settling on 30 days, so a dead sensor's ghost can no longer masquerade as ongoing data. The
-        forecast is explicitly labeled a forecast.
+        The forecast layer also exposed a less obvious problem with the sensor data. 
+        Some sensors had stopped reporting months earlier, but their last reading was still sitting in the historical data. 
+        <br/>
+        Without a cutoff, the system could mistake that old reading for an ongoing pattern and keep using it in the forecast.
+        When I checked the results, 102 of 239 street segments were being marked as “reliable” — but some of that confidence was based on sensors that hadn’t reported for a year.
+        The fix was to only use recent history, eventually settling on a 30-day window. 
+        That means old, inactive sensors can no longer make an area appear more predictable than the available data actually supports. 
+        The result is still a forecast, not a guarantee, and is labeled accordingly.
       </p>
 
       <h2 class="article-heading">Rewind mode, and a two-act lesson about where code actually runs</h2>
@@ -290,10 +276,12 @@
         collapsed down to a single cached row lookup — trivially fast regardless of how large the underlying
         computation gets.
       </p>
+
+
       <h2 class="article-heading">The night the data source doubled itself</h2>
 
       <video style="margin-bottom: 10px;" autoplay>
-        <source src="../../public/parkmap/pm-double.webm" type="video/webm">
+        <source src="../../public/parkmap/pm-double.webm" type="video/webm" autoplay autoloop>
       </video>
 
       <p class="article-paragraph">
