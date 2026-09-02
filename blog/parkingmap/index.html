@@ -44,137 +44,89 @@
       <span class="article-date">August 17th, 2026</span>
       <h1 class="article-title">Building parkingmap.melbourne</h1>
       <p class="article-intro">
-        City of Melbourne publishes vast amounts of data for analysis and development. One of those datasets exposes the on-street parking bays scattered throughout the city. <br/><br/>
-        I thought it would be useful to build something for the public that takes that data and renders a live map with a history and forecast.<br/>
-        The map answers these questions: "What street has open bays, how hard is it to park there, where can I park on x day at y time".
+        The City of Melbourne (CoM) publishes a large amount of data about the city, including information from its network of on-street parking sensors.<br/><br/>
+        I wanted to turn that data into something useful: a public map showing current parking availability, recent history, and a forecast of what parking might look like later.<br/>
+        The map is built around three questions: "Where can I park now, how difficult is parking on this street, and where am I likely to find a bay at a particular time?".
         <br/><br/>
-        A technical deepdive of <a href="https://parkingmap.melbourne" target="_blank" style="color: var(--accent);">parkingmap.melbourne</a> - A near-real-time map of on-street parking.
+        A technical deepdive of <a href="https://parkingmap.melbourne" target="_blank" style="color: var(--accent);">parkingmap.melbourne</a> - a near real-time view of on-street parking in Melbourne, Australia.
       </p>
 
       <h2 class="article-heading">What it is</h2>
       <p class="article-paragraph">
-        parkingmap.melbourne is a map exposing parking bays across Melbourne from thousands of in-ground parking bay sensors across the city.
-        Click a bay and you get its status, its zone's restriction schedule, and a short list of better options
-        nearby. Scrub backwards and you get seven days of history, played back like a recording. Look forward and
-        you get a probabilistic forecast of how likely a given street is
-        to have a free bay within the next 48 hours, built from the data the sensors have already produced.
+        parkingmap.melbourne maps thousands of on-street parking bays using data from the city's in-ground parking sensors.
+        Click a bay to see its current status, the restriction schedule for its zone, and some nearby alternatives. Scrub backwards to replay seven days of actual parking activity, or look ahead to see a probabilistic forecast of how likely a street is to have a free bay over the next 48 hours.
       </p>
       <p class="article-paragraph">
-        It is not a reservation system. It tells you what the most recent sensor reading says, how old that
-        reading is, and lets you decide how much to trust it. This is the actual design principle the whole thing is built around.
+        It isn't a reservation system. The map shows what the sensor most recently reported, how old that reading is, and gives you enough information to decide how much confidence to place in it. That distinction is fundamental to how the application is designed.
       </p>
       <p class="article-paragraph">
-        This is a portfolio piece: something built to be legible to other devs in about five minutes, and to demonstrate that I
-        can take a messy, half-documented government data feed and turn it into something that's honest about its
-        own limitations.
+        It's also a portfolio project: something another developer should be able to understand in about five minutes. More importantly, it demonstrates taking a messy, partially documented government data source and turning it into something useful, without pretending the underlying data is more reliable than it actually is.
       </p>
 
-      <h2 class="article-heading">Day one: the API</h2>
+<h2 class="article-heading">Day one: the API</h2>
+<p class="article-paragraph">
+  The City of Melbourne (CoM) publishes its parking sensor data as a GeoJSON feed, refreshed approximately every two minutes.
+</p>
+<p class="article-paragraph">
+  The first problem was understanding the status field. <code class="article-inline-code">"Present"</code> sounds like it should mean a car is present, so that's how I initially interpreted it. It actually means that the sensor itself is present and reporting — not that the parking bay is occupied.
+</p>
+<p class="article-paragraph">
+  <code class="article-inline-code">"Unoccupied"</code> is the value that indicates a free bay. Get that distinction wrong and the entire map is inverted: empty bays look occupied and occupied bays appear available.
+</p>
       <p class="article-paragraph">
-        The City of Melbourne publishes its parking sensor data as an open feed — GeoJSON, updated roughly every 2 minutes.
-        It's free to use under a CC BY 4.0 licence. 
-        
-      <br/>
-      Reading the field names, one looked completely unambiguous: 
-      
-      <code
-          class="article-inline-code">status_description</code>, with two possible values, <code
-          class="article-inline-code">"Present"</code> and <code class="article-inline-code">"Unoccupied"</code>.
-        You'd reasonably assume <code class="article-inline-code">"Present"</code> means a car is present, i.e. the
-        bay is occupied. You'd also reasonably assume the opposite framing — that the field is answering "is a car
-        present in this reading," full stop, which is exactly what it does. The gotcha wasn't that the field lied;
-        it's that reading it quickly and confidently, the way you read a field you're sure you understand, gets you
-        the wrong answer. <code class="article-inline-code">is_free</code> is <code
-          class="article-inline-code">status_description == "Unoccupied"</code>, and if you build the query the
-        "obvious" way, you get a map showing occupied bays as free and empty bays as taken — the single worst
-        possible bug for a parking map to ship.
+        There was another, less obvious limitation in the data. It's not really a bug so much as a boundary in what the source can tell us, and the sensible approach is to expose that limitation rather than invent an answer. The occupancy feed identifies each bay using a <code
+          class="article-inline-code">kerbsideid</code>, while the separate feed containing parking restrictions — 1P, 2P, loading zones, permits and so on — uses a different identifier, <code
+          class="article-inline-code">bayid</code>. The CoM doesn't publish a relationship between those two IDs.
+          That means there is no reliable way to say "this exact bay is 2P until 6pm". An application displaying that would be making an assumption and presenting it as fact. What the data does support is a broader zone-level relationship between bays and signage rules. So the map provides a zone-level indication instead: "this area commonly shows 2P, check the sign". It's less precise, but it's something the underlying data can actually support.
       </p>
       <p class="article-paragraph">
-        There's a second, quieter data-integrity gap in the same feed, and this one isn't really a bug — it's a
-        boundary the data itself draws, and the honest move is to respect it rather than paper over it. The sensors
-        that report whether a bay is occupied identify each bay one way (a <code
-          class="article-inline-code">kerbsideid</code>); the separate feed listing what each bay's actual signage
-        restricts — 1P, 2P, loading zone, permit — identifies bays a different way (<code
-          class="article-inline-code">bayid</code>). The CoM never published a link between the two
-        IDs. There is no way, from the data that exists, to say "this exact bay is 2P until 6pm" — any app that
-        displays that would be guessing and presenting the guess as fact. What the data <em>does</em> support is
-        coarser: bays carry a zone number, and zones link reliably (kind of) to the actual
-        signage rules for that area. So the map shows a zone-level hint instead of a bay-specific claim — "this area
-        commonly shows 2P, check the sign" — which is less satisfying than a precise answer but is the one the data
-        can actually back up.
-      </p>
-      <p class="article-paragraph">
-        The other founding fact from that first week: roughly half the sensor network was silently dead. Not degraded, but completely bimodal. A sensor either reported fresh data or it hadn't spoken in weeks, with almost nothing
-        in between. That fact became a permanent constraint on the whole UI. The map doesn't report a bare
-        percentage of free bays, because a bare percentage implies a number you can trust. Instead, it says "based on X
-        of Y bays". Coverage is treated as a feature to disclose, rather than a caveat to bury in a footnote.
+        Another important discovery from the first week was that roughly half of the sensor network was effectively dead. The data wasn't gradually degrading — sensors tended to either report fresh readings or stop reporting altogether, sometimes for weeks. That became an important constraint on the UI. Rather than displaying a single percentage of available bays, which could imply a level of accuracy that doesn't exist, the map says "based on X of Y bays". Coverage is therefore treated as part of the data itself, rather than something hidden away as a disclaimer.
       </p>
 
       <p class="article-quote">
-        Here's Lonsdale Street in the map, and a photo taken of the same spot at the same time. <br/> 
-        Each greyed-out dot around the location pin means the sensors haven't picked up a car coming or going within the last 24 hours - the actual data says the last signal was on 02/06/2025. <br/>
-        The reality contradicts the data.
+        Here's Lonsdale Street in the map, alongside a photo taken from the same location at roughly the same time. <br/> 
+        Every greyed-out dot around the location pin represents a sensor that hasn't detected a vehicle entering or leaving within the last 24 hours. In this case, the underlying data says the last signal was on 02/06/2025. <br/>
+        The real world and the data don't agree.
       </p>
 
       <div>
-      <img src="../../public//parkmap/lonsdale-location.webp" alt="Location pin dropped on Lonsdale St, Melbourne" aria-label="Location pin dropped on Lonsdale St, Melbourne"></img><br/>
-      <img src="../../public//parkmap/lonsdale-location-2.webp" alt="Location pin dropped on Lonsdale St, Melbourne" aria-label="Location pin dropped on Lonsdale St, Melbourne"></img><br/>
-      <img src="../../public/parkmap/lonsdale-live.webp" alt="image of cars parked on Lonsdale St" aria-label="Cars parked on Lonsdale St"></img>
+        <img src="../../public//parkmap/lonsdale-location.webp" alt="Location pin dropped on Lonsdale St, Melbourne" aria-label="Location pin dropped on Lonsdale St, Melbourne"></img><br/>
+        <img src="../../public//parkmap/lonsdale-location-2.webp" alt="Location pin dropped on Lonsdale St, Melbourne" aria-label="Location pin dropped on Lonsdale St, Melbourne"></img><br/>
+        <img src="../../public/parkmap/lonsdale-live.webp" alt="image of cars parked on Lonsdale St" aria-label="Cars parked on Lonsdale St"></img>
       </div>
 
       <h2 class="article-heading">The stack, and the one part I over-built</h2>
       <p class="article-paragraph">
-        The technical shape of the project is fairly conventional: Next.js on Vercel for the frontend, Supabase
-        (Postgres + PostGIS) for the database, Deno Edge Functions on <code
-          class="article-inline-code">pg_cron</code> for ingestion, MapLibre GL for rendering. None of that is
-        where the story is. The interesting reversal is the basemap.
+        The technical stack is fairly straightforward: Next.js on Vercel for the frontend, Supabase with Postgres and PostGIS for the database, Deno Edge Functions running through <code
+          class="article-inline-code">pg_cron</code> for ingestion, and MapLibre GL for the map. The interesting part isn't really the stack, though. It's what happened with the basemap.
       </p>
       <p class="article-paragraph">
-        Rendering a detailed vector map of a city center means either paying a per-request tile provider or hosting
-        your own tiles. My first plan was the "proper" version of self-hosting: use Protomaps' open tile format, but
-        put the tile archive in a Cloudflare R2 bucket, with its own CORS configuration and its own account to
-        manage. It's the textbook scalable answer. It's also the wrong answer at this scale. The actual tile extract
-        for the Melbourne CBD, cut down to just the area the app needs, is 7.2MB. That fits inside a Next.js app's
-        <code class="article-inline-code">public/</code> folder as an ordinary static file, served by Vercel exactly
-        like any other asset, with zero extra infrastructure, user accounts, and additional failure
-        modes. The R2 plan was dropped, a small, satisfying instance of building the
-        sophisticated version first and then realising the simple version was better.
+        A detailed vector map of central Melbourne means either paying for a tile provider on every request or hosting the tiles yourself. My initial plan was the more conventional self-hosted approach: use Protomaps' open tile format and store the tile archive in a R2 bucket, with separate CORS configuration and another account to manage.
+        It was perfectly reasonable architecture, also unnecessary. The Melbourne CBD extract the application actually needs is only 7.2MB. That fits comfortably inside Next.js's <code class="article-inline-code">public/</code> directory and can be served by Vercel as a normal static asset. No additional infrastructure, account or failure point required. I dropped the R2 setup and kept the simpler solution — a good example of building the sophisticated version first and then discovering that the boring version was better.
       </p>
 
       <h2 class="article-heading">How fast is "live" actually</h2>
       <p class="article-paragraph">
-        "Live" is a word that invites an assumption — that the dot on the map flips the instant a car pulls
-        out. It doesn't. Worst case, the map can run a bit over two
-        minutes behind reality. That's not corner-cutting, it's a floor set upstream by the data source
-        itself, and the interesting part is how that got confirmed.
+        Calling something "live" creates an obvious expectation: a car leaves a bay and the map immediately reflects it. That's not what happens here. In the worst case, the map can be a little over two minutes behind reality. That's not an optimisation I failed to make — rather, a limitation imposed by the source data itself, and it was possible to verify exactly where that delay came from.
       </p>
       <p class="article-paragraph">
-        A user once reported the map feeling roughly three minutes stale. That's the right kind of complaint
-        to get, because it prompts a measurement. The investigation found three separate delays
-        stacked on top of each other: 
+        A user reported that the map felt several minutes behind. That's actually useful feedback because it gave me something measurable to investigate. I found three separate sources of delay:
       </p>
-        <ol class="article-list">
-          <li class="article-list-item">How often the CoM's own feed re-publishes.</li>
-          <li class="article-list-item">How often this app's own background job checks that feed.</li>
-          <li class="article-list-item">How long the app briefly caches a response before checking again.</li>
-        </ol> 
-        <p class="article-paragraph">
-        The first of those was checked directly by polling the raw government feed every 20
-        seconds and watching a timestamp shared across thousands of sensors hold perfectly still, then jump by
-        exactly two minutes on schedule. A nice, clean confirmed floor. The source itself only republishes every
-        two minutes.
+      <ol class="article-list">
+        <li class="article-list-item">How often the CoM republishes its own feed.</li>
+        <li class="article-list-item">How often the application's background job checks that feed.</li>
+        <li class="article-list-item">How long the application caches a response before checking again.</li>
+      </ol> 
+      <p class="article-paragraph">
+        I verified the first one by polling the raw government feed every 20 seconds and watching a timestamp shared across the thousands of sensors. It remained unchanged and then all of them advanced by exactly two minutes each time. The source itself only republishes every two minutes, giving us a hard lower limit on how fresh the data can be.
       </p>
       <p class="article-paragraph">
-        Two of the three delays were pure overhead. The two-minute government-side floor is the thing that can't be improved from this
-        side at all, so, deliberately wasn't touched. Polling the source feed faster wouldn't produce fresher data. It would
-        just mean roughly four times the requests and four times the stored history, for a number on screen that
-        would look exactly the same. Confirming that before "fixing" it saved a chunk of infrastructure.
+        Two of those delays were application overhead. The two-minute delay from the government feed wasn't something I could improve, so I deliberately left it alone. Polling the source more frequently wouldn't produce newer data — it would simply generate roughly four times as many requests and four times as much stored history while producing the same value on screen. Establishing that first meant I could avoid "optimising" something that couldn't actually be improved.
       </p>
 
       <h2 class="article-heading">Making the map look honest</h2>
       <p class="article-paragraph">
-        The visual design of the map went through more failed attempts than I expected. The failures weren't really about taste, they were about the same <i>looked fine in isolation but
-        wrong in context</i> pattern showing up in pixels.
+        The visual design went through more failed iterations than I expected. Most of the problems weren't really aesthetic. They came from the same recurring issue: something could look perfectly reasonable in isolation while communicating the wrong thing once it was placed on the actual map.
       </p>
 
       <p class="article-eyebrow">Here's an early design draft</p>
@@ -186,97 +138,85 @@
       </div>
 
       <p class="article-paragraph">
-        The dot colours have to work as a claim: free is the only fully saturated color (the one thing worth
-        acting on), occupied is dimmer, stale is faded almost to nothing. Color is never the only signal — brightness
-        and a glow ring carry the same meaning in parallel, and a dedicated colour-blind mode swaps in a
-        blue/red/yellow palette used identically across live, rewind, and forecast.
+        The dot colours are effectively making a claim. Free bays are the only fully saturated colour because they're the information most worth acting on. Occupied bays are dimmer, while stale readings fade almost completely. Colour isn't used as the only indicator either — brightness and a glow ring reinforce the same meaning, while a dedicated colour-blind mode replaces the palette with blue, red and yellow consistently across live, rewind and forecast views.
       </p>
       <p class="article-paragraph">
-        The search-radius ring is drawn as a real geographic circle, sized in ground metres, rather than the map
-        engine's default pixel-radius circle — which would mean a different real-world distance depending on
-        zoom. Same failure mode as everything else here: looks correct until you check what it's actually claiming.
+        The search-radius ring is also based on actual geography. It's calculated using metres on the ground rather than the map engine's default pixel-based radius, which would represent a different real-world distance at different zoom levels. Again, something can look correct until you check what it is actually communicating.
       </p>
 
       <h2 class="article-heading">Three ways to look at the map</h2>
       <p class="article-paragraph">
-        The map has three different views, each answers a different question.
+        The map has three modes, each designed around a different question.
       </p>
       <p class="article-paragraph">
-        <strong class="article-heading">Live</strong> shows the most recent sensor reading for every bay, with its freshness checked right at
-        the moment it's drawn.
+        <strong class="article-heading">Live</strong> shows the latest sensor reading for each bay, with the freshness of that reading checked when the map is rendered.
       </p>
       <p class="article-paragraph">
-        <strong class="article-heading">Rewind</strong> plays back the last seven days of observed activity like a recording — drag a
-        scrubber and watch actual history replay across the whole CBD. It uses the same color-palette as
-        the live view rather than the forecast's gradient, because it's showing things that genuinely happened.
+        <strong class="article-heading">Rewind</strong> replays the previous seven days of observed activity. Drag the scrubber and watch actual parking events play back across the CBD. It uses the same palette as the live view rather than the forecast gradient because it's displaying events that actually happened.
       </p>
       <p class="article-paragraph">
-        <strong class="article-heading">Forecast</strong> looks forward instead of back: pick a future hour, and every street is colored by
-        the probability of finding a free bay there at that time, based on how that street has actually behaved
-        historically at that hour of the week. It uses a visibly different gradient-style palette specifically so it
-        can never be mistaken for a live reading at a glance — and where a street's historical data is too thin to
-        trust, the map says so outright in grey rather than rendering a confident-looking guess.
+        <strong class="article-heading">Forecast</strong> works in the opposite direction. Choose a future hour and each street is coloured according to the probability of finding a free bay there, based on how that street has historically behaved at that particular time and day. The forecast uses a separate gradient so it can't easily be confused with a live reading. Where there isn't enough historical data to make a useful prediction, the street is shown in grey instead of producing a misleadingly confident result.
       </p>
 
       <h2 class="article-heading">Building a forecast without pretending a guarantee</h2>
       <p class="article-paragraph">
-        Once enough history had built up — around six weeks — the natural next step was to add forecasting. 
-        I wanted to answer a simple question: <i>“I’m arriving at 2pm. Can I expect to find a park on this street, and how difficult is it likely to be?”</i>
-        The first version was fairly straightforward, but it became too slow as the amount of historical data grew. 
-        Rather than checking every possible time against all of that history, I changed the approach to look at how long each parking bay typically spent as free or occupied. 
-        This turned out to be both much faster and simpler to run, while also giving me a better foundation for the forecasting layer.
+        After roughly six weeks of collecting history, there was finally enough data to make forecasting worthwhile.
+        The question I wanted to answer was simple: <i>“I’m arriving at 2pm. Can I expect to find a park on this street, and how difficult is it likely to be?”</i>
+        The first implementation was relatively simple, but it became increasingly slow as the historical dataset grew.
+        Instead of comparing every possible time against the entire history, I changed the model to focus on how long each bay typically remained free or occupied. That approach was considerably faster and simpler to operate, while also giving the forecasting layer a better foundation.
       </p>
       <p class="article-paragraph">
-        The forecast layer also exposed a less obvious problem with the sensor data. 
-        Some sensors had stopped reporting months earlier, but their last reading was still sitting in the historical data. 
+        Forecasting also exposed another problem in the underlying data. Some sensors had stopped reporting months earlier, but their final readings were still present in the historical dataset.
         <br/>
-        Without a cutoff, the system could mistake that old reading for an ongoing pattern and keep using it in the forecast.
-        When I checked the results, 102 of 239 street segments were being marked as “reliable” — but some of that confidence was based on sensors that hadn’t reported for a year.
-        The fix was to only use recent history, eventually settling on a 30-day window. 
-        That means old, inactive sensors can no longer make an area appear more predictable than the available data actually supports. 
-        The result is still a forecast, not a guarantee, and is labeled accordingly.
+        Without a cutoff, those old readings could be interpreted as if the sensors were still behaving that way, artificially increasing confidence in the forecast.
+        When I inspected the results, 102 of 239 street segments were being classified as “reliable”, but some of that apparent reliability was coming from sensors that hadn't reported for an entire year.
+        I changed the system to only consider recent history, eventually settling on a 30-day window. That prevents inactive sensors from making an area appear more predictable than the available data actually justifies.
+        The output remains a forecast, not a guarantee, and is presented as such.
       </p>
 
-      <h2 class="article-heading">Rewind mode, and a two-act lesson about where code actually runs</h2>
+      <h2 class="article-heading">Rewind mode, where does code actually run?</h2>
+
       <p class="article-paragraph">
-        Rewind mode plays back the last seven days of bay activity like a video — drag a scrubber, watch dots flip
-        between free and occupied across the CBD. Under the hood it's a single database function, <code
-          class="article-inline-code">rewind_window()</code>, that assembles a full week of state transitions into
-        one JSON payload the frontend can step through client-side.
-      </p>
-      <p class="article-paragraph">
-        The first version of that function ran in roughly 14 seconds — fine to build against, obviously too slow to
-        ship. After optimization work (better indexing, tuned memory settings), it ran in about 2 seconds, verified
-        directly in Supabase's SQL editor. Shipped it. It immediately started 502ing in production.
-      </p>
-      <p class="article-paragraph">
-        The gap turned out to be environmental, not computational. The SQL editor runs queries as the <code
-          class="article-inline-code">postgres</code> superuser, with no statement timeout at all. The actual
-        production path goes through PostgREST, connecting as a role called <code
-          class="article-inline-code">authenticator</code>, which carries an 8-second statement timeout by policy. A
-        query that comfortably finishes in the editor can still get killed mid-flight through the real API, and the
-        failure surfaces as a generic 502 with no obvious connection to "query too slow" unless you know to look for
-        it. "Works in the SQL editor" turned out to prove nothing at all about production behavior — a distinction
-        that's obvious in hindsight and easy to miss the first time, because both paths run the literal same SQL
-        against the literal same database.
-      </p>
-      <p class="article-paragraph">
-        That got fixed with a covering index and tighter memory scoping, landing consistently around 2.6 seconds
-        through the real API this time, actually verified against the real API. Case closed, or so it seemed for a
-        few weeks.
-      </p>
-      <p class="article-paragraph">
-        Then the sensor feed doubled — more on that in a moment — and <code
-          class="article-inline-code">rewind_window()</code> slowed back down to 10 to 16.5 seconds, comfortably
-        over the timeout again. This time the fix wasn't another round of query tuning, because query tuning is a
-        linear response to a problem that had already proven it could jump nonlinearly overnight, with no warning,
-        at the whim of an external data provider. The actual fix moved the expensive work off the request path
-        entirely: a background cron job now recomputes the full seven-day payload every five minutes and stores it
-        in a small cache table, direct SQL, no PostgREST hop, no timeout to race against. The public-facing function
-        collapsed down to a single cached row lookup — trivially fast regardless of how large the underlying
-        computation gets.
+        Rewind mode works like a seven-day video of parking activity. Drag the scrubber and watch bays across the CBD change between free and occupied.
+        To do that, the system first has to assemble a complete week's worth of parking changes before anything can be sent to the browser.
       </p>
 
+      <p class="article-paragraph">
+        The first implementation took around 14 seconds to complete. That was acceptable during development, but obviously too slow for an interactive feature. After restructuring how the data was stored and processed, I brought the response down to roughly two seconds and shipped it.
+      </p>
+
+      <p class="article-paragraph">
+        It immediately started failing in production.
+      </p>
+
+      <p class="article-paragraph">
+        The query itself wasn't the problem. I had tested it in a different environment from the one serving the actual site. The SQL editor effectively allowed the query to run without a meaningful time limit, while the production API had an 8-second timeout. Something that looked completely fine during development could therefore still be terminated before it finished for a real user.
+      </p>
+
+      <p class="article-paragraph">
+        A useful lesson. Both environments were connected to the same database and running the same query, which made the difference particularly easy to overlook.
+      </p>
+
+      <p class="article-paragraph">
+        I fixed the immediate issue by improving the database setup and brought the real API response down to a consistent 2.6 seconds.
+      </p>
+
+      <p class="article-paragraph">
+        A few weeks later, the number of parking sensors doubled — more on that shortly — and the same operation had grown back to somewhere between 10 and 16.5 seconds. Once again, it was too slow to be useful.
+      </p>
+
+      <p class="article-paragraph">
+        At that point, I stopped trying to make the calculation itself faster. The bigger issue was that I was performing a large amount of work every time somebody opened Rewind mode. As the dataset continued to grow, there was no guarantee that another round of optimisation would keep it fast enough.
+      </p>
+
+      <p class="article-paragraph">
+        Instead, I moved the expensive work out of the user request entirely. A background job now prepares the complete seven days of data every five minutes and stores the finished result. When someone opens Rewind mode, the application only needs to retrieve that prepared data.
+      </p>
+
+      <p class="article-paragraph">
+        The important optimisation wasn't making the query faster. It was changing <em>when</em> the expensive work happened:
+        <strong>do the heavy lifting in the background, rather than making every user wait for it.</strong>
+      </p>
 
       <h2 class="article-heading">The night the data source doubled itself</h2>
 
@@ -285,126 +225,68 @@
       </video>
 
       <p class="article-paragraph">
-        That sensor-feed jump deserves its own telling. With no announcement, the City of Melbourne's public feed
-        grew from 3,388 sensor records to 6,324 — an 87% increase, overnight, with nothing in any changelog to
-        explain it.
-      </p>
-      <p class="article-paragraph">
-        The instinct here mattered more than any specific code change. The response wasn't to assume the new data
-        was fine because the pipeline kept running without visibly erroring — that's exactly the kind of "looks
-        fine, might not be" situation the whole project exists to be suspicious of. Before trusting the expanded
-        feed, I checked it for the signature of a bulk synthetic load: a suspicious cluster of near-identical
-        timestamps that would suggest placeholder rows rather than real hardware. There wasn't one. The new sensors'
-        status timestamps were spread naturally across years, back to 2022, consistent with a set of
-        already-existing sensors simply being newly exposed through the public API rather than freshly installed.
-      </p>
-      <p class="article-paragraph">
-        Once that was confirmed, the ingestion pipeline absorbed the expansion with zero code or schema changes,
-        because nothing in it had ever been written to assume a fixed bay count — it just upserts whatever the feed
-        hands it. The only real fallout was cosmetic: hardcoded copy on the About page citing "~3,388 sensors" and
-        "half the network is dead" both needed a manual sweep, settling on "a third" for the dead-sensor fraction,
-        since coverage had actually improved in relative terms even as the raw dead count grew. The one place the
-        doubling did cause a real structural problem was downstream, in rewind mode — the second act of the story
-        above.
+        Overnight, the sensor feed jumped from 3,388 records to 6,324 — an 87% increase.
       </p>
 
-      <h2 class="article-heading">Two incidents where "it says it succeeded" was the whole bug</h2>
       <p class="article-paragraph">
-        Two separate incidents, months apart, both boil down to the exact failure mode the project's founding
-        principle was written to guard against: something reported success, and it wasn't true.
-      </p>
-      <p class="article-paragraph">
-        The first was a cron job. Every night at 3:15am, a scheduled job was supposed to refresh the zone-level
-        parking restriction data — which streets are 1P, 2P, loading zones, and so on. <code
-          class="article-inline-code">cron.job_run_details</code>, Supabase's own status table for scheduled jobs,
-        showed that job succeeding, every single night, for over five weeks. It hadn't actually run correctly once
-        in that window. Buried in the job's stored command was a literal, unsubstituted placeholder string, <code
-          class="article-inline-code">&lt;SERVICE_ROLE_KEY&gt;</code>, sitting where a real authentication key
-        should have been, almost certainly dropped during an earlier key migration. Every nightly attempt was
-        authenticating with that placeholder, getting rejected with a 401, and never writing a single row. <code
-          class="article-inline-code">cron.job_run_details</code> doesn't actually mean "the job's logic completed
-        successfully" — it means "the job was dispatched." Those are different claims, and the table's own name
-        invites you to conflate them. The real signal was in a lower-level network log table, which showed the 401s
-        the whole time, for anyone who thought to check it instead of trusting the friendlier-looking status table.
-        Restriction hints across the entire CBD had been frozen at five-week-old values the whole time, silently,
-        with every system-level indicator saying everything was fine.
-      </p>
-      <p class="article-paragraph">
-        The second was more serious. A string of database migrations, written over the course of several weeks,
-        each aimed to lock down which functions the public — unauthenticated — role could execute, particularly a
-        couple of ingestion functions that started with an unconditional <code
-          class="article-inline-code">TRUNCATE</code> on their target table. Each migration ran a <code
-          class="article-inline-code">REVOKE EXECUTE ... FROM anon</code>, and each one, checked naively, looked
-        like it had worked. A direct verification query later proved that anonymous access to every one of those
-        functions was still <code class="article-inline-code">true</code>, despite three separate migrations each
-        believing they'd closed it. The root cause was a genuinely easy trap: Postgres automatically grants <code
-          class="article-inline-code">EXECUTE</code> to a built-in role called <code
-          class="article-inline-code">PUBLIC</code> the moment any function is created, and every other role —
-        including <code class="article-inline-code">anon</code> — implicitly inherits whatever <code
-          class="article-inline-code">PUBLIC</code> can do, regardless of what's revoked from that role by name.
-        Revoking <code class="article-inline-code">anon</code>'s own named grant did nothing, because <code
-          class="article-inline-code">anon</code> was never using its own grant; it was riding <code
-          class="article-inline-code">PUBLIC</code>'s. Until that was understood and an explicit <code
-          class="article-inline-code">REVOKE ... FROM PUBLIC</code> was added, the practical state of the database
-        was that a single unauthenticated POST request with an empty JSON payload could have permanently wiped a
-        production table. Tracing it further back turned up the actual root cause: a database-level
-        default-privilege rule that had been silently re-granting <code class="article-inline-code">anon</code> and
-        <code class="article-inline-code">authenticated</code> access to every newly created table, sequence, and
-        function, automatically, at creation time — meaning the same class of bug would have kept quietly
-        reappearing on every future migration until that default was fixed too, not just the symptom fixed once.
-      </p>
-      <p class="article-paragraph">
-        Neither incident was caught by anything announcing itself. Both were caught by refusing to accept a green
-        status as proof, and running a direct query to check what was actually true underneath.
+        I didn't immediately assume the new data was correct. After checking it, I found that the new sensors contained historical readings dating back as far as 2022. That suggested these weren't newly installed sensors, but existing sensors that had simply become available through the public feed.
       </p>
 
-      <h2 class="article-heading">A bug that wasn't a bug</h2>
       <p class="article-paragraph">
-        Not everything was a security incident. Some of it was just funny in retrospect. The theme toggle uses a
-        single icon that's supposed to represent both light and dark mode — a yin-yang symbol felt like an elegant
-        single-glyph solution, since the symbol already encodes exactly the duality the button represents. A user
-        reported it was invisible in dark mode. The obvious hypothesis is a CSS bug: wrong color, wrong contrast, an
-        inherited style stomping on it. None of that was true. The Unicode yin-yang character, on that particular
-        platform, was being rendered as a fixed-color emoji bitmap by the system font — a tiny raster image, baked
-        at build time by whoever drew that emoji, completely outside the reach of <code
-          class="article-inline-code">currentColor</code>, theme variables, or any CSS rule whatsoever. It wasn't
-        ignoring the styling; it was never a text glyph subject to styling in the first place. It took a screenshot,
-        not a computed-style inspection, to actually see what was happening — the DOM and the CSSOM both looked
-        completely correct. The fix was to stop asking a font to draw the icon and just draw it directly, as a small
-        hand-built inline SVG, the same way every other icon in the app already worked. A five-minute fix, once the
-        actual cause was visible instead of assumed.
+        Fortunately, the system had been designed without assuming a fixed number of sensors. The additional records therefore required no code or database changes.
       </p>
 
-      <h2 class="article-heading">Where it stands, and what's still open</h2>
       <p class="article-paragraph">
-        The map is live in production today, deployed on Vercel, running against the real City of Melbourne feed on
-        a two-minute ingestion cycle. It has three modes — live, forecast, and a full week of scrubbable history —
-        a colour-blind-safe palette option, geolocation-aware search radius, and marker clustering that specifically
-        clusters only the free bays, because a cluster count of unavailable spaces isn't information a driver needs
-        and would visually crowd out the ones that are.
-      </p>
-      <p class="article-paragraph">
-        Some things are still genuinely open, and staying honest about the project means saying so rather than
-        presenting a finished-looking snapshot. A handful of lower-priority hardening items — some remaining
-        function grants on read-only endpoints, error monitoring that doesn't exist yet, a log-retention setup that
-        still needs configuring — sit openly labeled as not done. And every one of those, notably, still runs into
-        the same rule that shaped the rewind-cache fix above: this project treats its own database as read-only from
-        an assistant's hands. Nothing gets written or altered directly, no matter how confident the fix — every
-        schema change gets written out as a migration file for a human to actually read and run by hand in the
-        database's own SQL editor. It's a slower way to work, and it's also the same underlying instinct as
-        everything else in this post: don't let something claim to be done until a human — or a direct, un-trusted
-        query — has actually checked.
-      </p>
-      <p class="article-paragraph">
-        That's a deliberate choice, and it's the same one running through everything above. Verify, don't trust
-        turned out not to be a slogan from week one that got outgrown. It's just how the project still gets built,
-        months later, one green status at a time refused to be taken at face value.
+        The immediate impact was mostly a handful of outdated numbers on the About page that needed to be updated. The more significant consequence came later, when the larger dataset exposed another performance problem in Rewind mode.
       </p>
 
-      <div class="article-footer">
-        Built with Next.js, Supabase (Postgres + PostGIS), Deno Edge Functions, pg_cron, MapLibre GL, and
-        Protomaps.
-      </div>
+<h2 class="article-heading">Two incidents where "it says it succeeded" was the whole bug</h2>
+<p class="article-paragraph">
+  Two incidents, separated by several months, ended up teaching me the same lesson: a system reporting success doesn't necessarily mean the thing you wanted actually happened.
+</p>
+<p class="article-paragraph">
+  The first involved a nightly job responsible for refreshing parking restriction data such as 1P, 2P and loading zones. For more than five weeks, the job reported a successful run every night.
+  It wasn't actually succeeding. An old placeholder where a real access key should have been meant every request was rejected, so the restriction data never changed. The city's parking information had quietly become more than five weeks out of date while the system continued reporting everything as normal.
+</p>
+<p class="article-paragraph">
+  The second incident was more serious. I had made several changes intended to prevent public access to sensitive database resources. Each change appeared to work, but a later check showed that the access was still available. In the worst case, a user could potentially have deleted an entire live data table with a single request.
+</p>
+<p class="article-paragraph">
+  Fixing it required more than changing another permission. I had to understand why the previous fixes weren't sticking, including a default setting that was silently restoring the same access whenever new database objects were created. Fixing that underlying behaviour meant the problem couldn't simply reappear the next time something was added.
+</p>
+<p class="article-paragraph">
+  Neither incident produced an obvious warning. Both were caught by the same principle: don't trust a "success" message — verify that the outcome you actually wanted has occurred.
+</p>
+
+<h2 class="article-heading">A bug that wasn't a bug</h2>
+<p class="article-paragraph">
+  Not every issue was serious. Some were just weird.
+</p>
+<p class="article-paragraph">
+  A user reported that the light/dark mode toggle disappeared when the site was in dark mode. It initially looked like a CSS problem, but the actual cause was much stranger: the operating system was rendering the yin-yang icon as a small fixed-colour image instead of an element that Parkmap could style.
+</p>
+<p class="article-paragraph">
+  Once I understood the cause, the fix was simple. About five minutes later, the icon had been replaced with a small inline SVG that Parkmap could control directly.
+</p>
+
+<h2 class="article-heading">Where it stands</h2>
+<p class="article-paragraph">
+  Parkmap is live today and continues to update from Melbourne's parking sensor feed every two minutes. It now includes live availability, a short-term forecast and seven days of scrubbable history, along with a colour-blind-friendly mode, location-aware search and map markers that only cluster available spaces — because a cluster of unavailable bays isn't particularly helpful when you're trying to find somewhere to park.
+</p>
+<p class="article-paragraph">
+  There are still a few things that need work, and they're deliberately visible rather than hidden: some access permissions need further tightening, error monitoring hasn't been implemented yet, and log retention still needs to be configured.
+</p>
+<p class="article-paragraph">
+  Database changes are also intentionally manual. However confident I am in a change, I write it out, review it and apply it myself rather than allowing the system to make database changes automatically.
+</p>
+<p class="article-paragraph">
+  That's been the rule since the beginning: <strong>don't call something done until you've actually checked it.</strong>
+</p>
+
+<div class="article-footer">
+  Built with Next.js, Supabase (Postgres + PostGIS), Deno Edge Functions, pg_cron, MapLibre GL, and
+  Protomaps.
+</div>
     </article>
   </main>
 </body>
